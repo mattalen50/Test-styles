@@ -1,0 +1,42 @@
+<?php
+
+/**
+ * @file
+ */
+
+ use Drupal\Core\Form\FormStateInterface;
+ use Drupal\paragraphs\ParagraphsTypeInterface;
+
+/**
+ * Implements hook_form_FORM_ID_alter() for Paragraph Types.
+ *
+ * Adds visibility options to the paragraph type form.
+ * 
+ */
+ function ums_custom_hesh_form_paragraphs_type_form_alter(&$form, FormStateInterface $form_state) {
+    $type = $form_state->getFormObject()->getEntity();
+    $form['readonly_settings'] = [
+        '#type' => 'details',
+        '#title' => t('Read only settings'),
+        '#group' => 'additional_settings',
+        '#open' => TRUE
+    ];
+    // @todo: Adding custom permission can decide who has the ability to customize this settings
+    $form['readonly_settings']['read_only_option'] = [
+        '#type' => 'checkbox',
+        '#title' => t('Make Paragraph Type Read-only'),
+        '#default_value' => $type->getThirdPartySetting('ums_custom_hesh', 'read_only_option', false),
+        '#description' => t('Activating read-only mode will lock the paragraph configurations, preventing any changes to paragraph type. Paragraph will be discoverable to add into fields.')
+    ];
+    $form['#entity_builders'][] = 'ums_custom_hesh_form_paragraphs_type_form_builder';
+ }
+
+
+ /**
+ * Entity builder for the paragraphs types form with custom options.
+ *
+ * @see ums_custom_hesh_form_paragraphs_type_form_alter()
+ */
+function ums_custom_hesh_form_paragraphs_type_form_builder($entity_type, ParagraphsTypeInterface $type, &$form, FormStateInterface $form_state) {
+    $type->setThirdPartySetting('ums_custom_hesh', 'read_only_option', $form_state->getValue('read_only_option'));
+}

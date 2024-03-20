@@ -1,0 +1,8 @@
+name: UMN Custom Hesh
+description: UMN Custom Hesh'
+type: module
+package: UMN Administration
+core_version_requirement: ^9 || ^10
+dependencies:
+    - paragraphs
+    - field_ui

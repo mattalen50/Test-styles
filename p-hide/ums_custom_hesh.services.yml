@@ -1,0 +1,5 @@
+services:
+  ums_custom_hesh.route_subscriber:
+    class: Drupal\ums_custom_hesh\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
