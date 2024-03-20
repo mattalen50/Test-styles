@@ -5,7 +5,7 @@
         overflow: auto;
         padding-bottom: 1.5em;
         margin-top: 3.5em;
-    }
+    }}
     .views-row:last-child {
         border-bottom: none;
     }
