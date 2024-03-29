@@ -1,0 +1,181 @@
+<?php
+
+use Drupal\Component\Utility\Html;
+use Drupal\node\Entity\Node;
+use Drupal\node\Entity\NodeType;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_preprocess_paragraph().
+ *
+ * Replace Node Display paragraphs' regular content with the selected node view mode.
+ */
+function law_node_display_preprocess_paragraph(&$variables) {
+  /** @var \Drupal\paragraphs\Entity\Paragraph $paragraph */
+  $paragraph = $variables['paragraph'];
+  if ($paragraph->bundle() != 'node_display') {
+    return;
+  }
+  if (empty($paragraph->field_display_type->target_id)) {
+    return;
+  }
+  // Get the display mode to use.
+  // The stored display mode string is in the form 'entitytype.viewmode'. We
+  // need to extract just the view mode part.
+  $display_mode = explode('.', $paragraph->field_display_type->target_id)[1];
+
+  // Only admins normally can see the rendered Display Type on the edit page,
+  // because of permissions around entity bundles. Let's override this.
+  if (!empty($variables['content']['field_display_type'])) {
+    $display_label = \Drupal::service('entity_display.repository')
+      ->getViewModes('node')[$display_mode]['label'];
+    $variables['content']['field_display_type'] = [
+      '#markup' => '<div class="field--name-field-display-type">' . $display_label . '</div>',
+    ];
+  }
+
+  // Replace the {{ content }} variable with the built render array for the
+  // node's display mode.
+  if ($node = law_base_get_node()) {
+    $build = \Drupal::entityTypeManager()->getViewBuilder('node')->view($node, $display_mode);
+    $variables['content']['node_display'] = $build;
+  }
+}
+
+/**
+ * Implements hook_field_widget_WIDGET_TYPE_form_alter().
+ *
+ * Filters the view mode selections in the Node Display paragraph form.
+ */
+function law_node_display_field_widget_options_select_form_alter(&$element, &$form_state, $context) {
+  // Only work in the context of Node Display paragraphs.
+  if (isset($context['form']['#entity']) && $context['form']['#entity']->bundle() == 'node_display') {
+    // Only affect the 'field_display_type' field.
+    /** @var \Drupal\Core\Field\FieldItemListInterface $items */
+    $items = $context['items'];
+    if ($items->getFieldDefinition()->getName() == 'field_display_type') {
+      // Only allow view modes that we know are allowed as Node Displays.
+      $element['#options'] = array_filter($element['#options'], function($k){
+        if (in_array($k, [
+          '_none',
+          'node.body',
+          'node.header',
+          'node.title',
+          'node.sidebar_primary',
+          'node.sidebar_secondary',
+          'node.sidebar_above_second',
+        ])) {
+          return TRUE;
+        }
+        return FALSE;
+      }, ARRAY_FILTER_USE_KEY);
+    }
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view().
+ */
+function law_node_display_node_view(array &$build, \Drupal\Core\Entity\EntityInterface $node, \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display, $view_mode) {
+  // Build the "Node title" display component.
+  if ($display->getComponent('node_title')) {
+    $build['node_title'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'h1',
+      '#value' => Html::escape($node->label()),
+      '#attributes' => [
+        'class' => ['node-title'],
+      ],
+    ];
+  }
+  // Build the "Linked title, H2" display component.
+  if ($display->getComponent('linked_teaser_title')) {
+    $build['linked_teaser_title'] = [
+      '#type' => 'inline_template',
+      '#template' => '<h2 class="node-title"><a href="{{ url }}">{{ title }}</a></h2>',
+      '#context' => [
+        'url' => $node->toUrl(),
+        'title' => $node->label(),
+      ],
+    ];
+  }
+  // Build the "Linked title, DIV" display component.
+  if ($display->getComponent('linked_title')) {
+    $build['linked_title'] = [
+      '#type' => 'inline_template',
+      '#template' => '<div class="node-title"><a href="{{ url }}">{{ title }}</a></div>',
+      '#context' => [
+        'url' => $node->toUrl(),
+        'title' => $node->label(),
+      ],
+    ];
+  }
+  // Replicate "Read more" link that Core makes available on the Teaser view mode.
+  if ($display->getComponent('links') && strpos($view_mode, 'teaser') !== FALSE) {
+    $node_title_stripped = strip_tags($node->label());
+    $links['node-readmore'] = [
+      'title' => t('Read more<span class="visually-hidden"> about @title</span>', [
+        '@title' => $node_title_stripped,
+      ]),
+      'url' => $node->toUrl(),
+      'language' => $node->language(),
+      'attributes' => [
+        'rel' => 'tag',
+        'title' => $node_title_stripped,
+      ],
+    ];
+    $build['links'] = [
+      '#theme' => 'links__node__node',
+      '#links' => $links,
+      '#attributes' => ['class' => ['links', 'inline']],
+    ];
+  }
+}
+
+
+/**
+ * Implements hook_entity_extra_field_info().
+ */
+function law_node_display_entity_extra_field_info() {
+  // Expose the "Node title" display component to the UI.
+  $extra = [];
+  foreach (NodeType::loadMultiple() as $bundle) {
+    $extra['node'][$bundle->id()]['display']['node_title'] = [
+      'label' => t('Node title, H1'),
+      'weight' => -10,
+      'visible' => FALSE,
+    ];
+    $extra['node'][$bundle->id()]['display']['linked_teaser_title'] = [
+      'label' => t('Linked title, H2'),
+      'weight' => -10,
+      'visible' => FALSE,
+    ];
+    $extra['node'][$bundle->id()]['display']['linked_title'] = [
+      'label' => t('Linked title, DIV'),
+      'weight' => -10,
+      'visible' => FALSE,
+    ];
+  }
+  // Expode the "Node display" built node to the Paragraph UI.
+  $extra['paragraph']['node_display']['display']['node_display'] = [
+    'label' => t('Node display'),
+    'weight' => -10,
+    'visible' => TRUE,
+  ];
+  return $extra;
+}
+
+/**
+ * Implements hook_preprocess_page().
+ */
+function law_node_display_preprocess_page(&$variables) {
+  // Disable the Page Title block, if the node has a Title Node Display.
+  if (isset($variables['node']->field_components)) {
+    foreach ($variables['node']->field_components as $item) {
+      if (isset($item->entity->field_display_type->target_id) && $item->entity->field_display_type->target_id == 'node.title') {
+        unset($variables['page']['content']['folwell_law_page_title']);
+        break;
+      }
+    }
+  }
+}

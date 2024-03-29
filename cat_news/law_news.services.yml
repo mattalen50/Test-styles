@@ -1,0 +1,4 @@
+services:
+  law_news.views_helper:
+    class: Drupal\law_news\ViewsHelper
+    arguments: ['@database', '@cache.default']

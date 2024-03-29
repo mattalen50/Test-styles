@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * Alter the value of a specific computed field.
+ *
+ * @param mixed $value
+ *   The computed value that can be altered.
+ * @param array $context
+ *   An array containing the 'entity' and 'field_name'.
+ */
+
+/**
+ * Implements hook_computed_field().
+ * Creates the $value used in Plugin > Field > FieldFormatters
+ */
+function computed_field_field_computed_profile_name_compute($entity_type_manager, $entity, $fields, $delta) {
+
+  $prefix = $entity->field_title_name_prefix->value;
+  $given = $entity->field_first_name->value;
+  $preferred = $entity->field_nickname->value;
+  $last = $entity->field_last_name->value;
+  $grad = $entity->field_jd_grad_year->value;
+  $pronouns = $entity->field_pronouns->value;
+  $suppress = $entity->field_suppress_person->value;
+  $is_faculty = $entity->field_role_faculty->value;
+  $alias = $entity->path->alias;
+  $published = $entity->status->value;
+  
+  $first = $preferred ? $preferred : $given;
+  $grad = $grad ? "&rsquo;" . substr($grad, -2) : '';
+
+  $name_values = [
+    'prefix' => $prefix,
+    'first' => $first,
+    'last' => $last,
+    'grad' => $grad,
+    'pronouns' => $pronouns,
+    'suppress' => $suppress,
+    'is_faculty' => $is_faculty,
+    'alias' => $alias,
+    'published' => $published
+  ];
+  
+  $value = serialize(array_filter($name_values));
+  
+  // echo('<pre>');
+  // print_r(serialize($name_values));
+  // echo('</pre>');
+  
+  return $value;
+}

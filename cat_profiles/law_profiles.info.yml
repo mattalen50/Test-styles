@@ -1,0 +1,7 @@
+name: Law Profiles
+type: module
+description: Code supporting Law Profiles content.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+  - law_users:law_users

@@ -1,0 +1,57 @@
+<?php
+
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\NodeType;
+
+/**
+ * Implements hook_node_view_alter().
+ *
+ * News Teaser: When no Featured Image is given, use the first associated
+ * Profile node image instead.
+ */
+function law_news_node_view_alter(array &$build, \Drupal\node\NodeInterface $node, EntityViewDisplayInterface $display) {
+  if ($node->bundle() != 'law_news') {
+    return;
+  }
+  if (isset($build['field_primary_image'])
+    && strpos($display->getMode(), 'teaser') !== FALSE
+    && $node->get('field_primary_image')->isEmpty()
+    && !$node->get('field_faculty_reference')->isEmpty()
+  ) {
+    $entityViewBuilder = \Drupal::entityTypeManager()->getViewBuilder('node');
+    $profile_build = $entityViewBuilder->view($node->field_faculty_reference->entity, 'mini_bio');
+    $profile_build = $entityViewBuilder->build($profile_build);
+    $build['field_primary_image'] = $profile_build['field_profile_image'];
+  }
+}
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ *
+ * News Page: Eliminate categories and departments with no published news.
+ */
+function law_news_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $view = $form_state->getStorage()['view'];
+  if ($view->id() == 'news' && $view->current_display == 'news_page') {
+    // Scrub empty Category exposed filter options.
+    $helper = Drupal::service('law_news.views_helper');
+    $counts = $helper->getTermCountsByType('categories', 'law_news');
+    foreach ($form['category']['#options'] as $tid => $option) {
+      if (empty($counts[$tid]) && is_numeric($tid)) {
+        unset($form['category']['#options'][$tid]);
+      }
+    }
+    asort($form['category']['#options']);
+
+    // Scrub empty Department exposed filter options.
+    $counts = $helper->getTermCountsByType('departments', 'law_news');
+    foreach ($form['department']['#options'] as $tid => $option) {
+      if (empty($counts[$tid]) && is_numeric($tid)) {
+        unset($form['department']['#options'][$tid]);
+      }
+    }
+    asort($form['department']['#options']);
+  }
+}

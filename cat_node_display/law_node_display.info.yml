@@ -1,0 +1,5 @@
+name: Law School node displays
+type: module
+description: Code supporting the Node Display paragraph type.
+package: Law School
+core_version_requirement: ^9 || ^10

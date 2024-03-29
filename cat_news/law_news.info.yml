@@ -1,0 +1,5 @@
+name: Law News
+type: module
+description: Code supporting Law News content.
+package: Law School
+core_version_requirement: ^9 || ^10

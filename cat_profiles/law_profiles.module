@@ -1,0 +1,27 @@
+<?php
+
+use Drupal\node\NodeInterface;
+use \Drupal\views\ViewExecutable;
+use \Drupal\views\Plugin\views\query\QueryPluginBase;
+
+/**
+ * Implements hook_node_presave().
+ */
+function law_profiles_node_presave(NodeInterface $node) {
+  // Adjust the profile owner according to matching x500 ids.
+  if ($node->getType() == 'profile') {
+    Drupal::service('law_users.profile_owner_adjuster')->adjustByProfile($node, FALSE);
+  }
+}
+
+/**
+ * Implements hook_views_query_alter().
+ *
+ * Profiles Page: show all results link
+ */
+function law_profiles_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+    $showAll = \Drupal::request()->query->get('show_all');
+    if ($view->id() == 'profiles' && $showAll == '1') {
+        $view->getPager()->setItemsPerPage(0);
+    }
+}

@@ -1,0 +1,7 @@
+name: Law Computed Profile Name
+type: module
+description: Provides a combined computed profile name from a combination of individual fields.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+  - computed_field:computed_field
