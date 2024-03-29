@@ -1,0 +1,13 @@
+{
+  "name": "umn_law/disclosure_navigation",
+  "description": "Provides a multi-level, accessible, disclosure navigation component",
+  "type": "drupal-module",
+  "authors": [{
+    "name": "Mark Byart",
+    "email": "byart@umn.edu"
+  }],
+  "minimum-stability": "dev",
+  "require": {
+    "drupal/menu_block": "^1.10"
+  }
+}

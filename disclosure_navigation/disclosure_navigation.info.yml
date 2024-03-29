@@ -1,0 +1,8 @@
+name: 'Disclosure Navigation'
+type: module
+description: 'Provides a disclosure navigation component'
+core_version_requirement: ^8 || ^9 || ^10
+package: 'Law School'
+version: '1.0.3'
+dependencies:
+  - menu_block:menu_block

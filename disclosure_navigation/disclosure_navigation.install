@@ -1,0 +1,47 @@
+<?php
+
+use \Drupal\block\Entity\Block;
+
+function disclosure_navigation_install() {
+
+  $theme = \Drupal::config('system.theme')->get('default');
+  $bid = 'disclosure_navigation';
+
+  $values = array(
+    'langcode' => 'en',
+    'status' => false,
+    'dependencies' => array(
+      'config' => 'system.menu.main',
+      'module' => 'menu_block',
+      'theme' => $theme,
+    ),
+    'id' => $bid,
+    'plugin' => 'menu_block:main',
+    'theme' => $theme,
+    'region' => 'header',
+    'weight' => 0,
+    'provider' => null,
+    'settings' => array(
+      'id' => 'menu_block:main',
+      'label' => 'Main Disclosure Navigation',
+      'label_display' => '0',
+      'provider' => 'menu_block',
+      'follow' => false,
+      'follow_parent' => 'child',
+      'label_link' => false,
+      'label_type' => 'block',
+      'level' => 1,
+      'depth' => 3,
+      'expand_all_items' => true,
+      'parent' => 'main:',
+      'suggestion' => 'disclosure_menu'
+    ),
+    'visibility' => array(),
+  );
+
+  $block = Block::load($bid);
+  if (empty($block)) {
+    $block = Block::create($values);
+    $block->save();
+  }
+}

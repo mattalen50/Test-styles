@@ -1,0 +1,18 @@
+<?php
+
+function disclosure_navigation_theme($existing, $type, $theme, $path) {
+  return [
+    'block__disclosure_navigation' => [
+      'template' => 'block--disclosure-navigation',
+      'base hook' => 'block',
+    ],
+    'menu__disclosure_menu' => [
+      'template' => 'menu--disclosure-menu',
+      'base hook' => 'menu',
+    ],
+  ];
+}
+
+function disclosure_navigation_page_attachments(&$variables) {
+  $variables['#attached']['library'][] = 'disclosure_navigation/assets';
+}

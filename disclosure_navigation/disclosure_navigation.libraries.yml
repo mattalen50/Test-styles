@@ -1,0 +1,6 @@
+assets:
+  css:
+    theme:
+      css/disclosure_navigation.css: {}
+  js:
+    js/disclosure_navigation.js: {}
