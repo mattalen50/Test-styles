@@ -1,0 +1,5 @@
+override_media_options.settings:
+  title: 'Override Media Options'
+  description: 'Allow non-admins to override the default publishing options for medias they can edit.'
+  route_name: override_media_options.settings
+  parent: system.admin_config_media

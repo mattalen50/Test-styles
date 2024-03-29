@@ -1,0 +1,92 @@
+<?php
+
+/**
+ * @file
+ * Main module file for override_media_options.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\media\MediaForm;
+use Drupal\Core\Access\AccessResult;
+
+/**
+ * Implements hook_form_alter().
+ */
+function override_media_options_form_alter(array &$form, FormStateInterface $form_state) {
+  $form_object = $form_state->getFormObject();
+
+  if ($form_object instanceof MediaForm) {
+    /** @var Drupal\Core\Session\AccountProxyInterface $user */
+    $user = \Drupal::currentUser();
+
+    if ($user->hasPermission('administer media')) {
+      return;
+    }
+
+    $form['revision']['#access'] = $form['revision_log_message']['#access'];
+
+    // Hide vertical tabs if all options are hidden except status.
+    if ((empty($form['created']) || !$form['created']['#access'])
+      && (empty($form['revision_log_message']) || !$form['revision_log_message']['#access'])
+      && (empty($form['uid']) || !$form['uid']['#access'])) {
+      $form['advanced']['#access'] = FALSE;
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_field_access_alter().
+ */
+function override_media_options_entity_field_access_alter(array &$grants, array $context) {
+  $entity_type = $context['field_definition']->getTargetEntityTypeId();
+  if ($entity_type == 'media' && $context['operation'] == 'edit' && !$context['account']->hasPermission('administer media')) {
+    $bundle = $context['items']->getEntity()->bundle();
+
+    switch ($context['field_definition']->getName()) {
+      case 'status':
+        $grants[':default'] = AccessResult::allowedIfHasPermissions(
+          $context['account'],
+          [
+            "override media $bundle published option",
+            "override all media published option",
+          ],
+          'OR'
+        );
+        break;
+
+      case 'revision_log_message':
+        $grants[':default'] = AccessResult::allowedIfHasPermissions(
+          $context['account'],
+          [
+            "override media $bundle revision option",
+            "override all media revision option",
+          ],
+          'OR'
+        );
+        break;
+
+      case 'uid':
+        $grants[':default'] = AccessResult::allowedIfHasPermissions(
+          $context['account'],
+          [
+            "override media $bundle authored by option",
+            "override all media authored by option",
+          ],
+          'OR'
+        );
+        break;
+
+      case 'created':
+        $grants[':default'] = AccessResult::allowedIfHasPermissions(
+          $context['account'],
+          [
+            "override media $bundle authored on option",
+            "override all media authored on option",
+          ],
+          'OR'
+        );
+        break;
+    }
+
+  }
+}

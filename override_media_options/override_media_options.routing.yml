@@ -1,0 +1,7 @@
+override_media_options.settings:
+  path: '/admin/config/content/override-media-options'
+  defaults:
+    _form: '\Drupal\override_media_options\Form\SettingsForm'
+    _title: 'Override Media Options settings'
+  requirements:
+    _permission: 'administer site configuration'
