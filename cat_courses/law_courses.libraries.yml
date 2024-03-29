@@ -1,0 +1,26 @@
+# Custom module library for general purposes.
+course_guide:
+  js:
+    js/law_courses.course_guide.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+# Custom module library for course guide admin.
+course_guide_admin:
+  js:
+    js/law_courses.course_guide_admin.js: {}
+  css:
+    theme:
+      css/law_courses.course_guide_admin.css: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+course_alpha:
+  js:
+    js/law_courses.course_alpha.js: { }
+  css:
+    theme:
+      css/law_courses.course_alpha.css: { }
+  dependencies:
+    - core/drupal
+    - core/jquery

@@ -1,0 +1,64 @@
+/* Citations Admin */
+
+.view-display-id-citations_admin .view-header {
+    margin: 1rem 0;
+  }
+  
+  .view-display-id-citations_admin #views-exposed-form-faculty-citations-citations-admin .form-item {
+    min-width: 200px;
+  }
+  
+  .view-display-id-citations_admin #views-exposed-form-faculty-citations-citations-admin input.form-text {
+    height: 31px;
+  }
+  
+  .view-display-id-citations_admin #views-exposed-form-faculty-citations-citations-admin .form-item-field-mn-legal-studies-id-value-1,
+  .view-display-id-citations_admin #views-exposed-form-faculty-citations-citations-admin fieldset[id^="edit-field-date-value-wrapper"] {
+    clear: left;
+  }
+  
+  .view-display-id-citations_admin .views-field-field-citation-links a {
+    font-size: .888em;
+    letter-spacing: .5px;
+    padding: .5rem 1rem;
+    color: #333;
+    background: #f0efee;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  
+  .view-display-id-citations_admin .citation-authors-wrapper {
+    display: inline;
+  }
+  
+  .view-display-id-citations_admin .citation-authors-wrapper div {
+    display: inline-block;
+  }
+  
+  .view-display-id-citations_admin .citation-authors-wrapper .author {
+    white-space: nowrap;
+  }
+  
+  .view-display-id-citations_admin .citation-authors-wrapper .author .storage {
+    margin-right: -.25em;
+  }
+  
+  .view-display-id-citations_admin .citation-authors-wrapper .author:nth-last-child(2) .storage {
+    margin-right: .25em;
+  }
+  
+  .view-display-id-citations_admin .citation-authors-wrapper .author-connector {
+    margin: 0 .25em 0 .5em;
+  }
+  
+  .view-display-id-citations_admin .views-field-edit-node a {
+    margin-right: .5em;
+  }
+  
+  @media screen and (min-width: 760px) {
+    .view-display-id-citations_admin .feed-icon {
+      position: absolute;
+      top: 10px;
+      right: 0;
+    }
+  }

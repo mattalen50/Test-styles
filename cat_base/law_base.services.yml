@@ -1,0 +1,4 @@
+services:
+  law_base.node_manager:
+    class: Drupal\law_base\NodeManager
+    arguments: ['@current_route_match', '@entity_type.manager']

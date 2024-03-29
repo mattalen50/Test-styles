@@ -1,0 +1,5 @@
+name: Law Base
+type: module
+description: General low-level helper code for the Law School.
+package: Law School
+core_version_requirement: ^9 || ^10

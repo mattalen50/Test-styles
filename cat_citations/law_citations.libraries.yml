@@ -1,0 +1,9 @@
+admin_view:
+  js:
+    'js/law_citations.admin_view.js': {}
+  css:
+    theme:
+      'css/law_citations.admin_view.css': {}
+  dependencies:
+    - core/drupal
+    - core/jquery

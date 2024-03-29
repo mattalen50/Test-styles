@@ -1,0 +1,124 @@
+/* Course Guide Admin */
+
+#views-exposed-form-admin-course-guide-course-guide-admin .advanced-field,
+#views-exposed-form-admin-course-guide-course-guide-export .advanced-field {
+  display: none;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin fieldset[id^='edit-course-fields-wrapper'] ,
+#views-exposed-form-admin-course-guide-course-guide-export fieldset[id^='edit-course-fields-wrapper']  {
+  padding-top: 0;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin fieldset[id^='edit-course-fields-wrapper']  legend,
+#views-exposed-form-admin-course-guide-course-guide-export fieldset[id^='edit-course-fields-wrapper']  legend {
+  visibility: hidden;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin fieldset[id^='edit-course-fields-wrapper'] label,
+#views-exposed-form-admin-course-guide-course-guide-export fieldset[id^='edit-course-fields-wrapper'] label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 1em;
+  font-weight: bold;
+  margin-top: 0.75em;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin .form--inline,
+#views-exposed-form-admin-course-guide-course-guide-export .form--inline {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin .form--inline>.js-form-item,
+#views-exposed-form-admin-course-guide-course-guide-export .form--inline>.js-form-item {
+  min-width: 260px;
+  max-width: 300px;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin fieldset[id^='edit-field-start-semester-tid-wrapper'],
+#views-exposed-form-admin-course-guide-course-guide-export fieldset[id^='edit-field-start-semester-tid-wrapper'],
+#views-exposed-form-admin-course-guide-course-guide-admin fieldset[id^='edit-field-course-type-ref-tid-wrapper'],
+#views-exposed-form-admin-course-guide-course-guide-export fieldset[id^='edit-field-course-type-ref-tid-wrapper'] {
+  min-width: auto !important;
+  width: 175px;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin fieldset .js-form-item,
+#views-exposed-form-admin-course-guide-course-guide-export fieldset .js-form-item {
+  float: none;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin .js-form-item .select2,
+#views-exposed-form-admin-course-guide-course-guide-export .js-form-item .select2 {
+  width: 100% !important;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin .form-actions,
+#views-exposed-form-admin-course-guide-course-guide-export .form-actions {
+  flex: 1 1 100%;
+}
+
+#views-exposed-form-admin-course-guide-course-guide-admin input.form-text,
+#views-exposed-form-admin-course-guide-course-guide-export input.form-text {
+  height: 31px;
+}
+
+.view-display-id-course_guide_admin .view-grouping-header {
+  font-weight: 600;
+  font-size: 24px;
+  margin: 1.5em 0 .25em;
+  font-family: "Lucida Grande", Verdana, sans-serif;
+  color: #fff;
+  background: #505761;
+  padding: 10px 20px;
+}
+
+.view-display-id-course_guide_admin .view-grouping-content .view-grouping-header {
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+
+.view-display-id-course_guide_admin .view-grouping-content .view-grouping-header a {
+  float: left;
+  margin: 1em 1em 1em 0;
+}
+
+.view-display-id-course_guide_export {
+	position: relative;
+}
+
+.view-display-id-course_guide_export .views-field-title-1 h2 {
+  font-size: 1.2em;
+}
+
+.view-display-id-course_guide_export .views-field-field-prerequisites-default.views-field-field-course-equivalency h3,
+.view-display-id-course_guide_export .views-field-field-student-year-override-1 h3 {
+  font-size: 1em;
+}
+
+.view-display-id-course_guide_admin .views-field-field-syllabus li>*,
+.view-display-id-course_guide_export .views-field-field-syllabus li>* {
+  vertical-align: middle;
+}
+
+.view-display-id-course_guide_admin .views-field-field-syllabus .file a,
+.view-display-id-course_guide_export .views-field-field-syllabus .file a {
+  word-break: break-all;
+  width: 200px;
+  display: block;
+}
+
+@media screen and (min-width: 760px) {
+  .view-display-id-course_guide_export .feed-icons {
+    position: absolute;
+    top: 10px;
+    right: 0;
+  }
+}
+
+.hide-semester-true,
+.Published-No {
+  background-color: #f8e8f1;
+}

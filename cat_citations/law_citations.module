@@ -1,0 +1,240 @@
+<?php
+
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
+
+
+/**
+ * Implements hook_theme().
+ */
+function law_citations_theme() {
+  //load override templates needed for citations admin view
+  return array(
+    'views_view_field__faculty_citations__citations_admin__field_citation_authors' => [
+      'template' => 'views-view-field--faculty-citations--citations-admin--field-citation-authors',
+      'base hook' => 'views',
+    ],
+    'node__profile__profile_name' => [
+      'template' => 'node--profile--profile-name',
+      'base hook' => 'node',
+    ],
+    'views_view_field__faculty_citations__citations_admin__field_citation_links' => [
+      'template' => 'views-view-field--faculty-citations--citations-admin--field-citation-links',
+      'base hook' => 'views',
+    ],
+    'storage__citation_link' => [
+      'template' => 'storage--citation-link',
+      'base hook' => 'storage',
+    ],
+  );
+}
+
+/**
+ * Implements hook_node_form_alter().
+ *
+ * Add a custom submit callback when adding or editing Faculty Citation nodes.
+ */
+function law_citations_form_node_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  switch ($form_id) {
+    case 'node_faculty_citation_form':
+    case 'node_faculty_citation_edit_form':
+      $form['actions']['submit']['#submit'][] = 'law_citations_form_node_faculty_citation_form_submit';
+      break;
+  }
+}
+
+/**
+ * Custom submit callback for node_faculty_citation_form().
+ *
+ * Redirect to the Citations Admin page upon submitting the form.
+ */
+function law_citations_form_node_faculty_citation_form_submit(&$form, FormStateInterface $form_state) {
+  $form_state->setRedirect('view.faculty_citations.citations_admin');
+}
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ *
+ * Alters the default exposed form filter output.
+ */
+function law_citations_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Citations admin view
+  if ($form['#id'] == 'views-exposed-form-faculty-citations-citations-admin') {
+
+    $form['#attached']['library'][] = 'law_citations/admin_view';
+
+    // convert select fields to select2
+    $form['field_mn_legal_studies_id_value_1']['#type'] = 'select2';
+    $form['field_is_new_value']['#type'] = 'select2';
+    $form['field_forthcoming_citation_value']['#type'] = 'select2';
+    $form['field_link_title_target_id']['#type'] = 'select2';
+    $form['field_link_title_target_id']['#empty_option'] = t('Choose some options');
+    $form['status']['#type'] = 'select2';
+
+    // Query profile nodes and find all published faculty nodes
+    $facNids = \Drupal::entityQuery('node')
+      ->accessCheck(FALSE)
+      ->condition('type','profile')
+      ->condition('status', 1)
+      ->condition('field_role_faculty', 1)
+      ->sort('title')
+      ->execute();
+    // Find all citation type terms in citation type vocab
+    $citTypes = \Drupal::entityQuery('taxonomy_term')
+      ->accessCheck(FALSE)
+      ->condition('vid','citation_type')
+      ->sort('name')
+      ->execute();
+
+    // If there are no nodes, move on
+    if (!$facNids) {
+      return FALSE;
+    }
+    if (!$citTypes) {
+      return FALSE;
+    }
+
+    //check the faculty reference filter exists
+    if('field_profile_target_id'){
+      // Start building out the options for our faculty select list
+      $facOptions = [];
+      $facNodes = Node::loadMultiple($facNids);
+      $default = [];
+
+      // Push titles into select list
+      foreach ($facNodes as $facNode) {
+        $facOptions[$facNode->id()] = $facNode->getTitle();
+      }
+
+      // Start building out our new form element which overrides the faculty reference filter on the view
+      $field_fac_select = 'field_profile_target_id';
+      $form[$field_fac_select]['#type'] = 'select2';
+      $form[$field_fac_select]['#options'] = $facOptions;
+      $form[$field_fac_select]['#multiple'] = FALSE;
+      $form[$field_fac_select]['#size'] = 9;
+      $form[$field_fac_select]['#empty_option'] = t('Choose some options');
+    }
+    if('field_citation_type_target_id_1'){
+      // Start building out the options for our citation type select list
+      $citOptions = [];
+      $citTerms = \Drupal\taxonomy\Entity\Term::loadMultiple($citTypes);
+      $default = [];
+
+      // Push names into select list
+      foreach ($citTerms as $citTerm) {
+        $citOptions[$citTerm->id()] = $citTerm->getName();
+      }
+
+      // Start building out our new form element which overrides the citation type filter on the view
+      $field_cit_select = 'field_citation_type_target_id_1';
+      $form[$field_cit_select]['#type'] = 'select2';
+      $form[$field_cit_select]['#options'] = $citOptions;
+      $form[$field_cit_select]['#multiple'] = FALSE;
+      $form[$field_cit_select]['#size'] = 9;
+      $form[$field_cit_select]['#empty_option'] = t('Choose some options');
+    }
+  }
+
+  // Recent Publications view
+  if ($form['#id'] == 'views-exposed-form-faculty-citations-recent-publications') {
+    // Get all faculty profiles with at least one citation.
+    if ($cache = \Drupal::cache()->get('law_citations.recent_publication_authors')) {
+      $facOptions = $cache->data;
+    }
+    else {
+      $query = \Drupal::database()->select('storage__field_profile', 's');
+      $query->addField('s', 'field_profile_target_id');
+      $query->distinct();
+      $citation_faculty_nids = $query->execute()->fetchCol();
+      // Filter down to published profiles that are not suppressed.
+      $facNids = \Drupal::entityQuery('node')
+        ->accessCheck(FALSE)
+        ->condition('type', 'profile')
+        ->condition('status', 1)
+        ->condition('field_role_faculty', 1)
+        ->condition('field_suppress_person', 0)
+        ->condition('nid', $citation_faculty_nids, 'IN')
+        ->sort('title')
+        ->execute();
+      // Start building out the options for our faculty select list
+      $facOptions = [];
+      $facNodes = Node::loadMultiple($facNids);
+      foreach ($facNodes as $facNode) {
+        $facOptions[$facNode->id()] = $facNode->getTitle();
+      }
+      \Drupal::cache()->set('law_citations.recent_publication_authors', $facOptions, time() + 86400, ['node_list:faculty_citation']);
+    }
+
+    // Start building out our new form element which overrides the faculty reference filter on the view
+    $field_fac_select = 'field_profile_target_id';
+    $form[$field_fac_select]['#type'] = 'select2';
+    $form[$field_fac_select]['#options'] = $facOptions;
+    $form[$field_fac_select]['#multiple'] = FALSE;
+    $form[$field_fac_select]['#size'] = 9;
+    $form[$field_fac_select]['#empty_option'] = t('-Any-');
+  }
+
+  // SSRN Papers view
+  if ($form['#id'] == 'views-exposed-form-faculty-citations-ssrn-papers') {
+    // Get all faculty profiles with at least one SSRN entry.
+    if ($cache = \Drupal::cache()->get('law_citations.ssrn_authors')) {
+      $facOptions = $cache->data;
+    }
+    else {
+      $ssrn_nids = \Drupal::entityQuery('node')
+        ->accessCheck(TRUE)
+        ->condition('type', 'faculty_citation')
+        ->condition('status', 1)
+        ->exists('field_ssrn_title')
+        ->exists('field_mn_legal_studies_id')
+        ->execute();
+      $query = \Drupal::database()->select('storage__field_profile', 's');
+      $query->addField('s', 'field_profile_target_id');
+      $query->addJoin('inner', 'node__field_citation_authors', 'nfca', 'nfca.field_citation_authors_target_id = s.entity_id');
+      $query->condition('nfca.entity_id', $ssrn_nids, 'IN');
+      $query->distinct();
+      $ssrn_faculty_nids = $query->execute()->fetchCol();
+      // Filter down to published profiles that are not suppressed.
+      $facNids = \Drupal::entityQuery('node')
+        ->accessCheck(FALSE)
+        ->condition('type', 'profile')
+        ->condition('status', 1)
+        ->condition('field_role_faculty', 1)
+        ->condition('field_suppress_person', 0)
+        ->condition('nid', $ssrn_faculty_nids, 'IN')
+        ->sort('title')
+        ->execute();
+      // Start building out the options for our faculty select list
+      $facOptions = [];
+      $facNodes = Node::loadMultiple($facNids);
+      // Push titles into select list
+      foreach ($facNodes as $facNode) {
+        $facOptions[$facNode->id()] = $facNode->getTitle();
+      }
+      \Drupal::cache()->set('law_citations.ssrn_authors', $facOptions, time() + 86400, ['node_list:faculty_citation']);
+    }
+
+    // Start building out our new form element which overrides the faculty reference filter on the view
+    $field_fac_select = 'title_selective';
+    $form[$field_fac_select]['#type'] = 'select2';
+    $form[$field_fac_select]['#options'] = $facOptions;
+    $form[$field_fac_select]['#multiple'] = FALSE;
+    $form[$field_fac_select]['#size'] = 9;
+    $form[$field_fac_select]['#empty_option'] = t('-Any-');
+  }
+}
+
+/**
+ * Implements hook_storage_view_alter().
+ *
+ * Citation Link cache entries should be cleared if their referenced taxonomy
+ * term type is updated.
+ */
+function law_citations_storage_view_alter(array &$build, EntityInterface $storage, EntityViewDisplayInterface $display) {
+  if ($storage->bundle() == 'citation_link' && !empty($storage->field_link_title->target_id)) {
+    $build['#cache']['tags'][] = 'taxonomy_term:' . $storage->field_link_title->target_id;
+  }
+}

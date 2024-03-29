@@ -1,0 +1,33 @@
+{#
+/**
+ * @file storage.html.twig
+ * Default theme implementation to present Storage data.
+ *
+ * This template is used when viewing Storage pages.
+ *
+ *
+ * Available variables:
+ * - content: A list of content items. Use 'content' to print all content, or
+ * - attributes: HTML attributes for the container element.
+ *
+ * @see template_preprocess_storage()
+ *
+ * @ingroup themeable
+ */
+#}
+
+{% set citationLink = content.field_citation_link.0['#plain_text'] %}
+{% set titleTerm = content.field_link_title.0['#taxonomy_term'] %}
+{% set linkTitle = titleTerm.name.0.value %}
+{% set hasProxy = titleTerm.field_add_proxy.0.value %}
+{% set proxyUrl = titleTerm.field_proxy_url.0.value %}
+{% set queryBase = titleTerm.field_querystring_base.0 ? '?' ~ titleTerm.field_querystring_base.0.value ~ '=' : '' %}
+{% set proxyLink = [proxyUrl, queryBase, citationLink]|join %}
+	
+{% if hasProxy == '1' %}
+	<div class="proxy-links"><a href="{{ proxyLink }}" target="_blank">{{- linkTitle -}}: MN Law</a>
+	<a href="{{ citationLink }}" target="_blank">{{- linkTitle -}}: Others</a></div>
+{% else %}
+	<a href="{{ citationLink }}" target="_blank">{{- linkTitle -}}</a>
+{% endif %}
+

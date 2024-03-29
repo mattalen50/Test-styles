@@ -1,0 +1,5 @@
+services:
+  law_courses.event_subscriber:
+    class: Drupal\law_courses\EventSubscriber\SearchApiSubscriber
+    tags:
+      - { name: event_subscriber }

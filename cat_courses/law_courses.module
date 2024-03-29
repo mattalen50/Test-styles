@@ -1,0 +1,449 @@
+<?php
+
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
+use Drupal\Core\Render\Markup;
+use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
+use Drupal\node\NodeInterface;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Views;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+
+/**
+ * Implements hook_node_presave().
+ *
+ * Automatically populate the hidden "field_course_level" field, used as a Facet.
+ */
+function law_courses_node_presave(NodeInterface $node) {
+  if ($node->bundle() != 'course') {
+    return;
+  }
+  if (empty($node->field_course_number->value)) {
+    $node->field_course_level->value = NULL;
+    return;
+  }
+  $number = substr($node->field_course_number->value, 0, 1);
+  if (is_numeric($number)) {
+    $node->field_course_level->value = $number . 'xxx';
+  }
+  else {
+    $node->field_course_level->value = NULL;
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function law_courses_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Only work on Course Section node forms.
+  if (!in_array($form_id, ['node_course_section_form', 'node_course_section_edit_form'])) {
+    return;
+  }
+  // Set an AJAX handler for 'field_course' so we can pre-fill Course Section
+  // fields from the selected Course.
+  $form['field_course']['widget']['#ajax'] = [
+    'callback' => 'law_courses_copy_course_fields_ajax_callback',
+    'wrapper' => $form['#id'],
+	'event' => 'change',
+  ];
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for facets_form().
+ *
+ * Recreate the Course Guide view's exposed form filters here inside the facets
+ * form. Add a submit callback to process those filter values as GET parameters,
+ * which is how Views expects them.
+ */
+function law_courses_form_facets_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $form['facets']['#type'] = 'container';
+  $form['facets']['#attributes'] = ['class' => 'facets'];
+  // Add the "Indicates Concentrations" description text.
+  // In some error conditions, the 'subject' element is nested one more level
+  // deep. We'll check both possible positions.
+  if (isset($form['facets']['subject'][0]['subject'])) {
+    $form['facets']['subject'][0]['subject']['#description'] = '* ' . t('Indicates Concentrations.');
+  }
+  if (isset($form['facets']['subject'][0][0]['subject'])) {
+    $form['facets']['subject'][0][0]['subject']['#description'] = '* ' . t('Indicates Concentrations.');
+  }
+  // Recreate the Views exposed filters.
+  // @todo do this programmatically instead of hard-coding them.
+  $form['facets']['keywords'] = [
+    '#type' => 'textfield',
+    '#title' => t('Keywords'),
+    '#default_value' => Drupal::request()->query->get('keywords'),
+  ];
+  $form['actions']['items_per_page'] = [
+    '#type' => 'select2',
+    '#title' => t('Per page'),
+    '#required' => TRUE,
+    '#select2' => [
+      'minimumResultsForSearch' => 10,
+    ],
+    '#options' => [
+      '25' => '25',
+      '50' => '50',
+      '100' => '100',
+    ],
+    '#default_value' => Drupal::request()->query->get('items_per_page') ?? '25',
+    '#weight' => '-100',
+  ];
+  // Add a custom submit callback.
+  $form['#submit'][] = 'law_courses_form_facets_form_submit';
+  // Add a reset button.
+  $form['actions']['reset'] = [
+    '#type' => 'link',
+    '#title' => 'Reset',
+    '#url' => Url::fromRouteMatch(Drupal::routeMatch()),
+    '#attributes' => [
+      'id' => 'edit-reset',
+      'class' => ['btn', 'form-reset'],
+    ],
+  ];
+
+  // Dig into ALL facet form elements and switch any select elements to select2.
+  // This works for all facets that follow the pattern in the render array of:
+  // $form['facets'][<facet_name>][0][<facet_name>]['#type'] = 'select'
+  foreach ($form['facets'] as $facet => $properties) {
+    // @todo is there a better way to avoid warnings about unset keys than this?
+    if (
+      is_array($properties) &&
+      array_key_exists('0', $properties) &&
+      array_key_exists($facet, $properties[0]) &&
+      array_key_exists('#type', $properties[0][$facet]) &&
+      $properties[0][$facet]['#type'] == 'select'
+    ) {
+      $form['facets'][$facet][0][$facet]['#type'] = 'select2';
+    }
+  }
+
+}
+
+/**
+ * Custom submit callback for the facets form.
+ *
+ * Add our custom form element values to the redirect URL, because the Views
+ * engine expects them to be GET parameters (and Facets Form won't do anything
+ * to them otherwise).
+ *
+ * @see law_courses_form_facets_form_alter()
+ */
+function law_courses_form_facets_form_submit(&$form, FormStateInterface $form_state) {
+  if ($form_state->getValue('keywords') || $form_state->getValue('items_per_page')) {
+    /** @var Url $url */
+    $url = $form_state->getRedirect();
+    $query = $url->getOption('query');
+    $query['keywords'] = $form_state->getValue('keywords');
+    $query['items_per_page'] = $form_state->getValue('items_per_page');
+    $url->setOption('query', $query);
+  }
+}
+
+/**
+ * Implements hook_views_post_execute().
+ *
+ * Course Guide: When there are no results in the view, the Facets in the Facets
+ * Form implementation will still try to drill-down and most will be empty. This
+ * is going to be confusing to anyone who tries to use the form again. Instead,
+ * we're not going to show the Course Guide with no results; we'll redirect to
+ * the unfiltered Course Guide and show an error message to the user.
+ *
+ * @see https://drupal.stackexchange.com/a/303653
+ */
+function law_courses_views_post_execute(ViewExecutable $view) {
+  if ($view->id() == 'course_guide' && $view->current_display == 'course_guide_page') {
+    if (!count($view->result)) {
+      Drupal::messenger()->addWarning(t('There were no results for the combination of search options you chose. Please try a different search.'));
+      $response = new RedirectResponse($view->getDisplay()->getUrl()->toString());
+      // Save the session so things like messages get saved.
+      $request = \Drupal::request();
+      $request->getSession()->save();
+      $response->prepare($request);
+      // Make sure to trigger kernel events, then send the RedirectResponse.
+      \Drupal::service('kernel')->terminate($request, $response);
+      $response->send();
+    }
+  }
+}
+
+/**
+ * AJAX callback for Course Section form's 'Course' entity reference field.
+ *
+ * Loads the selected Course node form, then swaps in entire field components
+ * from that form into the original Course Section form. This requires that
+ * corresponding components in 'Course' and 'Course Section' have the same form
+ * widget settings, but they should anyway.
+ *
+ * @see law_courses_form_alter()
+ */
+function law_courses_copy_course_fields_ajax_callback(&$element, FormStateInterface $form_state) {
+  $course_nid = $form_state->getValue(['field_course', 0, 'target_id']);
+
+  if (empty($course_nid)) {
+    return $element;
+  }
+  $node = Node::load($course_nid);
+  $course_form = \Drupal::entityTypeManager()
+    ->getFormObject('node', 'default')
+    ->setEntity($node);
+  $course_form = \Drupal::formBuilder()->getForm($course_form);
+  foreach (Element::children($element) as $field_name) {
+    if (!in_array($field_name, ['title']) && strpos($field_name, 'field_') !== 0) {
+      continue;
+    }
+    if (isset($course_form[$field_name])) {
+      $element[$field_name] = $course_form[$field_name];
+    }
+  }
+  return $element;
+}
+
+/**
+ * Implements hook_block_view_alter().
+ */
+function law_courses_block_view_alter(array &$build, \Drupal\Core\Block\BlockPluginInterface $block) {
+  // Add JS to hide Paragraphs containing disabled facets.
+  if (strpos($block->getPluginId(), 'facet_block') !== FALSE) {
+    $build['#attached']['library'][] = 'law_courses/course_guide';
+  }
+}
+
+
+/**
+ * Implements hook_preprocess_node().
+ */
+function law_courses_preprocess_node(&$variables) {
+  $node = $variables['node'];
+  if (!in_array($node->bundle(), ['course', 'course_section'])) {
+    return;
+  }
+  // field_student_year_override must supersede field_student_year.
+  if (!empty($node->field_student_year_override->value)) {
+    hide($variables['content']['field_student_year']);
+  }
+
+  // Anonymous users should see a login link instead of a syllabus file.
+  if (
+    Drupal::currentUser()->isAnonymous()
+    && isset($variables['content']['field_syllabus'])
+    && !empty($variables['node']->field_syllabus->target_id)
+  ) {
+    $login_route = (Drupal::moduleHandler()->moduleExists('simplesamlphp_auth'))
+      ? 'simplesamlphp_auth.saml_login'
+      : 'user.login';
+    $login_url = Url::fromRoute($login_route)
+      ->setOption('query', [
+        'destination' => Drupal::request()->getPathInfo(),
+      ])
+      ->toString();
+    $variables['content']['field_syllabus'] += [
+      '#type' => 'inline_template',
+      '#template' => '
+      <div class="field--name-field-syllabus">
+        <div class="field__label">Syllabus</div>
+        <div class="field__items">
+          <a href="{{ login_url }}">Log in to see the syllabus.</a>
+        </div>
+      </div>
+    ',
+      '#context' => ['login_url' => $login_url],
+    ];
+  }
+}
+
+/**
+ * Implements hook_preprocess_page_title().
+ *
+ * Append the course number to the course section page title.
+ */
+function law_courses_preprocess_page_title(&$variables) {
+  if ($node = law_base_get_node()) {
+    if ($node->bundle() == 'course') {
+      $variables['title'] = Markup::create(strip_tags($variables['title']) . ' – ' . $node->field_course_number->value);
+    }
+    if ($node->bundle() == 'course_section' && !empty($node->field_course->entity)) {
+      $variables['title'] = Markup::create(strip_tags($variables['title']) . ' – ' . $node->field_course->entity->field_course_number->value);
+    }
+  }
+}
+
+/**
+ * Implements hook_node_view().
+ *
+ * Course Sections need to inherit their referenced Course node's Subject Areas.
+ */
+function law_courses_node_view(array &$build, NodeInterface $node, EntityViewDisplayInterface $display, $view_mode) {
+  if ($node->bundle() == 'course_section' && !empty($node->field_course->entity)) {
+    if ($display->getComponent('field_subject_area')) {
+      $view_builder = \Drupal::entityTypeManager()->getViewBuilder('node');
+      $course_build = $view_builder->view($node->field_course->entity, 'sidebar_secondary');
+      $course_build = $view_builder->build($course_build);
+      $build['field_subject_area'] = $course_build['field_subject_area'];
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_extra_field_info().
+ */
+function law_courses_entity_extra_field_info() {
+  // Expose the "Subject Area" display component to the UI.
+  $extra = [];
+  $extra['node']['course_section']['display']['field_subject_area'] = [
+    'label' => t('Subject Area'),
+    'weight' => 0,
+    'visible' => FALSE,
+  ];
+  return $extra;
+}
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ *
+ * Course Alphabetical: Don't show course type options that aren't currently
+ * used.
+ */
+function law_courses_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $view = $form_state->getStorage()['view'];
+  // Course Alpha
+  if ($view->id() == 'course_alpha' && $view->current_display == 'page') {
+    $form['#attached']['library'][] = 'law_courses/course_alpha';
+    // Curate the Course Type options dropdown.
+    $cache = Drupal::cache()->get('law_courses.course_type_options');
+    if (!empty($cache->data)) {
+      $form['course_type']['#options'] = $cache->data;
+    }
+    else {
+      foreach ($form['course_type']['#options'] as $value => $label) {
+        if (!is_numeric($value)) {
+          continue;
+        }
+        // Remove Course Type options that don't actually have results. The view
+        // has a contextual filter option allowing us to check each term.
+        $view_option_check = Views::getView('course_alpha');
+        $view_option_check->setArguments([$value]);
+        // We need to ignore the View's exposed filters, since we want to filter
+        // on the full set of results regardless of the user's choices. We have
+        // to set the Exposed Input to a non-empty array, though, since Views
+        // will fill in an empty Exposed Input array using the request parameters.
+        $view_option_check->setExposedInput(['placeholder' => 1]);
+        $view_option_check->execute();
+        if (empty($view_option_check->result)) {
+          unset($form['course_type']['#options'][$value]);
+          continue;
+        }
+        // Use the full Course Type name in the dropdowns.
+        $term = Term::load($value);
+        if (!empty($term->field_full_name->value) && $term->field_full_name->value <> $label) {
+          $form['course_type']['#options'][$value] = $term->field_full_name->value . " ($label)";
+        }
+      }
+      Drupal::cache()->set('law_courses.course_type_options', $form['course_type']['#options'], \Drupal\Core\Cache\CacheBackendInterface::CACHE_PERMANENT, ['node_list:course_section']);
+    }
+  }
+
+  // Course Guide Admin
+  if ($form['#id'] == 'views-exposed-form-admin-course-guide-course-guide-admin' || $form['#id'] == 'views-exposed-form-admin-course-guide-course-guide-export') {
+    $form['#attached']['library'][] = 'law_courses/course_guide_admin';
+
+    $courseOptions = [];
+    $courseNumberOptions = [];
+    $facOptions = [];
+
+    $courseNids = \Drupal::entityQuery('node')
+      ->accessCheck(FALSE)
+      ->condition('type','course')
+      ->sort('title')
+      ->execute();
+    $courseNodes = Node::loadMultiple($courseNids);
+    foreach ($courseNodes as $courseNode) {
+      $courseOptions[$courseNode->id()] = $courseNode->getTitle();
+      $courseNumberOptions[$courseNode->get('field_course_number')->value] = $courseNode->get('field_course_number')->value;
+    }
+    asort($courseNumberOptions);
+
+    $facNids = \Drupal::entityQuery('node')
+      ->accessCheck(FALSE)
+      ->condition('type','profile')
+      ->condition('status', 1)
+      ->condition('field_role_faculty', 1)
+      ->sort('title')
+      ->execute();
+    $facNodes = Node::loadMultiple($facNids);
+    foreach ($facNodes as $facNode) {
+      $facOptions[$facNode->id()] = $facNode->getTitle();
+    }
+
+    // Create a pseudo-filter for Course Selection, since we can't make a
+    // multiple-select filter from the Views UI.
+    // @see law_course_views_query_alter()
+    $field_course_select = 'law_courses_course';
+    $form[$field_course_select]['#type'] = 'select2';
+    $form[$field_course_select]['#title'] = t('Course');
+    $form[$field_course_select]['#options'] = $courseOptions;
+    $form[$field_course_select]['#multiple'] = TRUE;
+    $form[$field_course_select]['#size'] = 9;
+    $form[$field_course_select]['#empty_option'] = t('Choose some options');
+
+    // Create a pseudo-filter for Course Number, since we can't make a
+    // multiple-select filter from the Views UI.
+    // @see law_course_views_query_alter()
+    $field_course_number_select = 'law_courses_course_number';
+    $form[$field_course_number_select]['#type'] = 'select2';
+    $form[$field_course_number_select]['#title'] = t('Course Number');
+    $form[$field_course_number_select]['#options'] = $courseNumberOptions;
+    $form[$field_course_number_select]['#multiple'] = TRUE;
+    $form[$field_course_number_select]['#size'] = 9;
+    $form[$field_course_number_select]['#empty_option'] = t('Choose some options');
+
+    // Override Instructor filter
+    $field_instructor_wrapper = 'field_instructors_target_id_wrapper';
+    $field_instructor_select = 'field_instructors_target_id';
+    $form[$field_instructor_wrapper][$field_instructor_select]['value']['#type'] = 'select2';
+    $form[$field_instructor_wrapper][$field_instructor_select]['value']['#options'] = $facOptions;
+    $form[$field_instructor_wrapper][$field_instructor_select]['value']['#multiple'] = FALSE;
+    $form[$field_instructor_wrapper][$field_instructor_select]['value']['#size'] = 9;
+    $form[$field_instructor_wrapper][$field_instructor_select]['value']['#empty_option'] = t('Choose some options');
+
+    // create a fieldset to hold course, course number and keywords fields
+    $form['course_fields_wrapper'] = [
+      '#type' => 'fieldset',
+      '#title' => t('Course Filter Options'),
+      '#weight' => -1,
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+      '#tree' => FALSE,
+    ];
+    $form['course_fields_wrapper'][$field_course_select] = $form[$field_course_select];
+    $form['course_fields_wrapper'][$field_course_number_select] = $form[$field_course_number_select];
+    $form['course_fields_wrapper']['combine'] = $form['combine'];
+    $form['course_fields_wrapper']['combine']['#title'] = 'Keyword(s)';
+    unset($form[$field_course_select]);
+    unset($form[$field_course_number_select]);
+    unset($form['combine']);
+  }
+}
+
+/**
+ * Implements hook_views_query_alter().
+ *
+ * Process the custom pseudo-filter inputs we added in
+ * law_courses_form_views_exposed_form_alter().
+ */
+function law_courses_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+  /** @var \Drupal\views\Plugin\views\query\Sql $query */
+  if (!empty($view->getExposedInput()['law_courses_course'])) {
+    $courses = $view->getExposedInput()['law_courses_course'];
+    $query->addWhere(1, 'node_field_data.nid', $courses, 'IN');
+  }
+  if (!empty($view->getExposedInput()['law_courses_course_number'])) {
+    $numbers = $view->getExposedInput()['law_courses_course_number'];
+    $query->addTable('node__field_course_number', 'node_field_data');
+    $query->addWhere(1, 'node__field_course_number.field_course_number_value', $numbers, 'IN');
+  }
+}

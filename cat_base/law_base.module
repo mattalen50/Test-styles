@@ -1,0 +1,31 @@
+<?php
+
+use Drupal\law_base\PreservedChangedItem;
+
+/**
+ * A shorter wrapper around NodeManager::getViewedNode().
+ *
+ * @return mixed
+ */
+function law_base_get_node() {
+  return Drupal::service('law_base.node_manager')->getViewedNode();
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave().
+ */
+function law_base_node_presave(\Drupal\node\NodeInterface $node) {
+  if (empty($node->getTitle())) {
+    $node->setTitle('[no title]');
+  }
+}
+
+/**
+ * Implements hook_field_info_alter().
+ *
+ * Use an alternate class for handling the "changed" property.
+ * Adapted from https://www.drupal.org/project/preserve_changed
+ */
+function law_base_field_info_alter(&$info) {
+  $info['changed']['class'] = PreservedChangedItem::class;
+}

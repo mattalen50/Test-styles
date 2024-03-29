@@ -1,0 +1,5 @@
+name: Law School Citations
+type: module
+description: Functionality supporting Faculty Citations.
+package: Law School
+core_version_requirement: ^9 || ^10

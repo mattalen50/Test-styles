@@ -1,0 +1,29 @@
+html {
+  scroll-padding-top: 50px;
+}
+
+.glossary-nav-wrapper {
+  margin-bottom: 2em;
+}
+
+.glossary-nav {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.glossary-nav li {
+  list-style: none;
+  display: inline;
+  margin: 0;
+  padding: 0 !important;
+}
+
+.glossary-nav a {
+  display: inline-block;
+  padding: 2px 9px;
+}
+
+.glossary-nav a.disabled {
+  color: #767676;
+  border-bottom: 0;
+}
