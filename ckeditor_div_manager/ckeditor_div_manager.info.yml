@@ -1,0 +1,7 @@
+name: Law CKEditor Div Manager
+type: module
+description: Adds the Div Container Manager plugin to CKEditor.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+ - drupal:ckeditor

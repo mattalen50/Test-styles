@@ -1,0 +1,15 @@
+{
+  "name": "umn_law/disclosure_navigation_gcm",
+  "description": "Provides a multi-level, accessible, disclosure navigation component for Group Content Menu",
+  "type": "law-contrib-module",
+  "authors": [{
+    "name": "Mark Byart",
+    "email": "byart@umn.edu"
+  }],
+  "minimum-stability": "dev",
+  "require": {
+    "umn_law/disclosure_navigation": "^1.0",
+    "drupal/group_content_menu": "^1.0",
+    "drupal/group": "^1.0"
+  }
+}

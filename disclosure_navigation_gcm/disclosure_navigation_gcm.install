@@ -1,0 +1,44 @@
+<?php
+
+use \Drupal\block\Entity\Block;
+
+function disclosure_navigation_gcm_install() {
+
+  $theme = \Drupal::config('system.theme')->get('default');
+  $bid = 'disclosure_navigation_gcm';
+
+  $values = array(
+    'langcode' => 'en', 
+    'status' => false,
+    'dependencies' => array(
+      'config' => 'group_content_menu.group_content_menu_type.main_navigation',
+      'module' => 'group_content_menu',
+      'theme' => $theme,
+    ),
+    'id' => $bid,
+    'plugin' => 'group_content_menu:main_navigation',
+    'theme' => $theme,
+    'region' => 'header',
+    'weight' => 0,
+    'provider' => null,
+    'settings' => array(
+      'id' => 'group_content_menu:main_navigation',
+      'label' => 'Disclosure Navigation (Group Content Menu)',
+      'label_display' => '0',
+      'provider' => 'group_content_menu',
+      'context_mapping' => array(
+        'group' => '@group.group_route_context:group',
+      ),
+      'level' => 1,
+      'depth' => 3,
+      'expand_all_items' => true,
+    ),
+    'visibility' => array(),
+  );
+
+  $block = Block::load($bid);
+  if (empty($block)) {
+    $block = Block::create($values);
+    $block->save();
+  }
+}

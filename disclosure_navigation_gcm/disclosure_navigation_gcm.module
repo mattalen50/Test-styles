@@ -1,0 +1,65 @@
+<?php
+
+use \Drupal\block\Entity\Block;
+
+/**
+ * Implements hook_theme().
+ *
+ * Specifies templates to use
+ */
+function disclosure_navigation_gcm_theme($existing, $type, $theme, $path) {
+  
+  $dn_path = \Drupal::service('extension.list.module')->getPath('disclosure_navigation') . '/templates';
+  
+  return [
+    'block__disclosure_navigation_gcm' => [
+      'template' => 'block--disclosure-navigation',
+      'base hook' => 'block',
+      'path' => $dn_path,
+    ],
+    'menu__group_microsite__region_header__disclosure_menu_gcm' => [
+      'template' => 'menu--disclosure-menu',
+      'base hook' => 'menu',
+      'path' => $dn_path,
+    ],
+  ];
+}
+
+/**
+ * Implements hook_preprocess_block().
+ *
+ * Add block region to variables so it can be used as suggestion.
+ */
+function disclosure_navigation_gcm_preprocess_block(&$variables) {
+  
+  /** @var \Drupal\group\Entity\Group $group */
+  $group_context_service = Drupal::service('group.group_route_context');
+  $group = $group_context_service->getGroupFromNode() ?? $group_context_service->getGroupFromRoute();
+  
+  if (!empty($group) && !isset($variables['content']['#attributes']['group'])) {
+    $variables['content']['#attributes']['group'] = $group->bundle();
+  }
+ 
+  if (isset($variables['elements']['#id']) || !empty($variables['elements']['#id'])) {
+    if ($block = Block::load($variables['elements']['#id'])) {
+      $variables['content']['#attributes']['region'] = $block->getRegion();     
+    }
+  }
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter().
+ *
+ * Provide region based menu suggestions.
+ */
+function disclosure_navigation_gcm_theme_suggestions_menu_alter(&$suggestions, array $variables) {
+  if (isset($variables['attributes']['group']) && isset($variables['attributes']['region'])) {
+    $suggestions[] = _build_menu_theme_suggestion($variables['attributes']['group'], $variables['attributes']['region']);
+  }
+}
+
+function _build_menu_theme_suggestion($group, $region) {
+  $group = $group ?? 'default';
+  $region = $region ?? 'default';
+  return 'menu__group_' . $group . '__region_' . $region . '__disclosure_menu_gcm';
+}

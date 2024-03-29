@@ -1,0 +1,10 @@
+name: 'Disclosure Navigation (Group Content Menu)'
+type: module
+description: 'Provides a disclosure navigation component for the Group Content Menu module'
+core_version_requirement: ^8 || ^9 || ^10
+package: 'Law School'
+version: '1.0.3'
+dependencies:
+  - disclosure_navigation:disclosure_navigation
+  - group_content_menu:group_content_menu
+  - group:group
