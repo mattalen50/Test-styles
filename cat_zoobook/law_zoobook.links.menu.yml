@@ -1,0 +1,9 @@
+law_zoobook.photo_directory_import:
+  title: Photo directory import
+  route_name: law_zoobook.photo_directory_import
+  weight: 10
+
+law_zoobook.profile_directory_import:
+  title: Student Profile directory import
+  route_name: law_zoobook.profile_directory_import
+  weight: 9

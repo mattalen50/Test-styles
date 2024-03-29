@@ -1,0 +1,7 @@
+name: Law Workflow
+type: module
+description: Code in support of Workflow and Content Moderation transitions.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+  - drupal:content_moderation

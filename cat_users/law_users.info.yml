@@ -1,0 +1,5 @@
+name: Law School Users
+type: module
+description: Role provisioning for Law School user accounts.
+package: Law School
+core_version_requirement: ^9 || ^10

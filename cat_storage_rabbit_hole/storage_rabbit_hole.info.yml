@@ -1,0 +1,8 @@
+name: Rabbit Hole storage
+type: module
+description: Adds Rabbit Hole functionality for storage entities.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+  - rabbit_hole:rabbit_hole
+  - storage:storage

@@ -1,0 +1,7 @@
+name: Law School Zoobook
+type: module
+description: Access control for Zoobook nodes.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+  - law_users:law_users

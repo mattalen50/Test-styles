@@ -1,0 +1,53 @@
+<?php
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_entity_access().
+ *
+ * Only users with "view student directory" may access Zoobook nodes.
+ */
+function law_zoobook_entity_access(EntityInterface $entity, $operation, AccountInterface $account) {
+  // Only act when viewing Zoobook nodes.
+  if ($entity->bundle() !== 'zoobook' || $operation !== 'view') {
+    return AccessResult::neutral();
+  }
+  if ($account->hasPermission('view student directory')) {
+    return AccessResult::allowed()->addCacheContexts(['user.permissions']);
+  }
+  return AccessResult::forbidden('The user must have permission to view the student directory.');
+}
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ *
+ * Student Directory: Only include current years in Graduation Year options.
+ */
+function law_zoobook_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $view = $form_state->getStorage()['view'];
+  if ($view->id() == 'zoobook' && $view->current_display == 'student_directory_page') {
+    // Scrub "Hide year" options from the "Year" exposed filter.
+    $hide_years = Drupal::entityQuery('taxonomy_term')
+      ->accessCheck(FALSE)
+      ->condition('vid', 'grad_year')
+      ->condition('field_hide_year', 1)
+      ->execute();
+    foreach ($hide_years as $tid) {
+      unset($form['year']['#options'][$tid]);
+    }
+  }
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function law_zoobook_node_presave(NodeInterface $node) {
+  // Adjust the profile owner according to matching x500 ids.
+  if ($node->getType() == 'zoobook') {
+    Drupal::service('law_users.profile_owner_adjuster')->adjustByProfile($node, FALSE);
+  }
+}

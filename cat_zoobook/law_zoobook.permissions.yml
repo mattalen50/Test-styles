@@ -1,0 +1,8 @@
+view student directory:
+  title: 'View student directory'
+view student directory archive:
+  title: 'View student directory archive'
+import student directory photos:
+  title: 'Import student directory photos'
+import student directory profiles:
+  title: 'Import student directory profiles'

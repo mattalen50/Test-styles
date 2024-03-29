@@ -1,0 +1,15 @@
+law_zoobook.photo_directory_import:
+  path: '/admin/content/manage/zoobook/photo-directory-import'
+  defaults:
+    _title: 'Photo directory import'
+    _form: 'Drupal\law_zoobook\Form\PhotoDirectoryImportSettingsForm'
+  requirements:
+    _permission: 'import student directory photos'
+
+law_zoobook.profile_directory_import:
+  path: '/admin/content/manage/zoobook/profile-directory-import'
+  defaults:
+    _title: 'Student profile directory import'
+    _form: 'Drupal\law_zoobook\Form\ProfileDirectoryImportSettingsForm'
+  requirements:
+    _permission: 'import student directory profiles'

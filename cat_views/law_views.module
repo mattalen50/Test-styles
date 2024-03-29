@@ -1,0 +1,90 @@
+<?php
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ */
+function law_views_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Exempt certain views.
+  $view = $form_state->getStorage()['view'];
+  if (in_array($view->id(), ['media_library'])) {
+    return;
+  }
+
+  /*
+   * We have paragraphs for embedding views 'Page' displays, which is necessary
+   * for getting exposed filter forms as blocks. But we need to make the exposed
+   * forms act on the current path, not the static path configured on the display.
+   */
+  $form['#action'] = \Drupal::request()->getPathInfo();
+
+  // Add a "reset" button.
+  $url = Url::fromRouteMatch(Drupal::routeMatch());
+  if ($url->getRouteName() == 'views.ajax') {
+    // AJAX forms won't have the original URL, so we have to get it from the
+    // $_SERVER superglobal if possible.
+    if ($referer = \Drupal::request()->server->get('HTTP_REFERER')) {
+      $parts = parse_url($referer);
+      $url = Url::fromUserInput($parts['path']);
+    }
+    else {
+      // We don't have a valid reset URL.
+      return;
+    }
+  }
+  $form['actions']['reset'] = [
+    '#type' => 'link',
+    '#title' => 'Reset',
+    '#url' => $url,
+    '#attributes' => [
+      'id' => 'edit-reset',
+      'class' => ['btn', 'form-reset'],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_preprocess_views_view_table().
+ *
+ * (1)
+ * For Migration Helper views, extract the URL from Paragraph "Parent ID" columns
+ * and use the link URL as the link title.
+ *
+ * This is necessary because Entity Reference Revisions does not currently have
+ * a functioning relationship path from a Paragraph to its host node, so the URL
+ * is the only thing we have that identifies what the host page is.
+ *
+ * (2)
+ * Entity bundle names do not show for non-admins, because they do not have
+ * permissions to administer those bundles. We need to detect when this is
+ * happening and fill in the missing bundle names.
+ */
+function law_views_preprocess_views_view_table(&$variables) {
+  /** @var \Drupal\views\ViewExecutable $view */
+  $view = $variables['view'];
+  // See note (1) in the function description.
+  if (strpos($variables['view']->id(), 'migration') !== FALSE) {
+    foreach ($variables['rows'] as $delta => &$row) {
+      if (!isset($row['columns']['parent_id']['content'][0]['field_output']['#markup'])) {
+        continue;
+      }
+      $original_markup = $row['columns']['parent_id']['content'][0]['field_output']['#markup']->__toString();
+      $matches = [];
+      if (preg_match('/href=\"(.*)\"/', $original_markup, $matches)) {
+        $url = $matches[1];
+        $row['columns']['parent_id']['content'][0]['field_output']['#markup'] = "<a href='$url'>$url</a>";
+      }
+    }
+  }
+
+  // See note (2) in the function description.
+  if (!empty($variables['fields']['type'])) {
+    foreach ($variables['rows'] as $delta => &$row) {
+      if (isset($row['columns']['type']) && empty($row['columns']['type']['content']) && !empty($variables['result'][$delta]->_entity->type->entity)) {
+        $row['columns']['type']['content'][0]['field_output']['#markup'] = $variables['result'][$delta]->_entity->type->entity->label();
+      }
+    }
+  }
+}

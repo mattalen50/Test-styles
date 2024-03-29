@@ -1,0 +1,7 @@
+name: law_views
+type: module
+description: Supports embedding views &#039;page&#039; displays on arbitrary pages.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+  - drupal:views

@@ -1,0 +1,6 @@
+name: Law Text Filters
+type: module
+description: Custom text filters for Law School
+package: Law School
+core_version_requirement: ^10
+

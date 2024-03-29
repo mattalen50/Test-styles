@@ -1,0 +1,175 @@
+<?php
+
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
+use Drupal\group\Entity\Group;
+use Drupal\user\UserInterface;
+
+/**
+ * Implements hook_user_login().
+ */
+function law_users_user_login(UserInterface $account) {
+  // Automatically adjust a user's basic user roles upon login.
+  try {
+    Drupal::service('law_users.user_role_adjuster')->adjustUserRoles($account);
+    $account->save();
+  }
+  catch (\Exception $e) {
+    watchdog_exception('law_users', $e);
+  }
+
+  // Automatically set ownership for profiles associated with the user.
+  try {
+    Drupal::service('law_users.profile_owner_adjuster')->adjustByUser($account);
+  }
+  catch (\Exception $e) {
+    watchdog_exception('law_users', $e);
+  }
+}
+
+/**
+ * Implements hook_user_insert().
+ */
+function law_users_user_insert(UserInterface $account) {
+  // Automatically adjust the user's basic user roles.
+  try {
+    Drupal::service('law_users.user_role_adjuster')->adjustUserRoles($account);
+    $account->save();
+  }
+  catch (\Exception $e) {
+    watchdog_exception('law_users', $e);
+  }
+
+  // Automatically set ownership for profiles associated with the user.
+  try {
+    Drupal::service('law_users.profile_owner_adjuster')->adjustByUser($account);
+  }
+  catch (\Exception $e) {
+    watchdog_exception('law_users', $e);
+  }
+}
+
+/**
+ * Implements hook_simplesamlphp_auth_user_roles_alter().
+ *
+ * Determine which SAML attribute contains the user name, then run it through
+ * the User Role Adjuster to alter the list of roles to assign.
+ */
+function law_users_simplesamlphp_auth_user_roles_alter(&$roles, $attributes) {
+  $username_field = Drupal::config('simplesamlphp_auth.settings')->get('user_name');
+  if (!empty($attributes[$username_field]) && is_array($attributes[$username_field])) {
+    $username = reset($attributes[$username_field]);
+    /** @var UserInterface $account */
+    $account = user_load_by_name($username);
+    if ($account) {
+      Drupal::service('law_users.user_role_adjuster')->adjustUserRoles($account);
+      $roles = array_merge($roles, $account->getRoles(TRUE));
+    }
+  }
+}
+
+/**
+ * Implements hook_toolbar_alter().
+ *
+ * Don't show the "Law School" menu for users without that permission.
+ */
+function law_users_toolbar_alter(&$items){
+  if (!\Drupal::currentUser()->hasPermission('access administration pages')) {
+    unset($items['administration']);
+  }
+
+  // Prepend content entry/management links, if permitted.
+  $items['user']['tray']['law_users'] = [
+    '#theme' => 'links__toolbar_user',
+    '#links' => [],
+    '#attributes' => [
+      'class' => ['toolbar-menu'],
+    ],
+    '#cache' => [
+      'contexts' => ['user.permissions'],
+    ],
+    '#weight' => -100,
+  ];
+  if (\Drupal::currentUser()->hasPermission('create faculty_news content')) {
+    $items['user']['tray']['law_users']['#links']['add_faculty_news'] = [
+      'title' => t('Submit faculty news'),
+      'url' => Url::fromRoute('node.add', ['node_type' => 'faculty_news']),
+      'attributes' => [
+        'title' => t('Submit faculty news'),
+      ],
+    ];
+  }
+  if (\Drupal::currentUser()->hasPermission('create law_event content')) {
+    $items['user']['tray']['law_users']['#links']['add_law_event'] = [
+      'title' => t('Submit event'),
+      'url' => Url::fromRoute('node.add', ['node_type' => 'law_event']),
+      'attributes' => [
+        'title' => t('Submit event'),
+      ],
+    ];
+  }
+  try {
+    if (\Drupal::currentUser()->hasPermission('create image media')) {
+      // Verify that the route to the My Media view exists.
+      $route = \Drupal::service('router.route_provider')->getRouteByName('view.user_media.page');
+      $items['user']['tray']['law_users']['#links']['my_media'] = [
+        'title' => t('My media'),
+        'url' => Url::fromRoute('view.user_media.page', ['arg_0' => \Drupal::currentUser()->id()]),
+        'attributes' => [
+          'title' => t('See my uploaded media'),
+        ],
+      ];
+    }
+  } catch (\Exception $e) {
+    watchdog_exception('law_users', $e);
+  }
+}
+
+/**
+ * Implements hook_preprocess_links__toolbar_user().
+ *
+ * Alter the links in the User tray of the admin toolbar. These links are prepared
+ * in a post render callback, so they are not available during hook_toolbar_alter().
+ */
+function law_users_preprocess_links__toolbar_user(&$vars) {
+  // Remove "Edit profile" link.
+  unset($vars['links']['account_edit']);
+
+  // Change "View profile" to "My content".
+  if (isset($vars['links']['account'])) {
+    $vars['links']['account']['link']['#title'] = t('My content');
+  }
+}
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ *
+ * Admin People view: change Group ID text filter into a select filter.
+ */
+function law_users_form_views_exposed_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+  $view = $form_state->getStorage()['view'];
+  if ($view->id() == 'user_admin_people' && $view->current_display == 'page_1') {
+    $form['gid'] = [
+      '#type' => 'select',
+      '#options' => ['' => t('- Any -')],
+      '#default_value' => '',
+    ];
+    // Create the options list by loading all groups. Since the original filter
+    // is the numeric Group ID, the keys of the array will be the Group IDs.
+    $cache = Drupal::cache()->get('law_users.group_select_options');
+    if (!empty($cache->data)) {
+      $form['gid']['#options'] += $cache->data;
+    }
+    else {
+      $group_options = [];
+      foreach(Group::loadMultiple() as $group) {
+        $group_options[$group->id()] = $group->label();
+      }
+      asort($group_options);
+      $form['gid']['#options'] += $group_options;
+      Drupal::cache()
+        ->set('law_users.group_select_options', $group_options, CacheBackendInterface::CACHE_PERMANENT, ['group_list']);
+    }
+  }
+}

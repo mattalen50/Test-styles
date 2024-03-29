@@ -1,0 +1,15 @@
+services:
+  logger.channel.law_users:
+    parent: logger.channel_base
+    arguments: [ 'law_users' ]
+  law_users.user_role_adjuster:
+    class: 'Drupal\law_users\UserRoleAdjuster'
+
+  law_users.route_subscriber:
+    class: Drupal\law_users\EventSubscriber\LawUsersRouteSubscriber
+    tags:
+      - { name: event_subscriber }
+
+  law_users.profile_owner_adjuster:
+    class: Drupal\law_users\ProfileOwnerAdjuster
+    arguments: ['@entity_type.manager']

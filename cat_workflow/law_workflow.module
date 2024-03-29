@@ -1,0 +1,25 @@
+<?php
+
+/**
+ * Implements hook_preprocess_node().
+ */
+function law_workflow_preprocess_node(&$vars) {
+  $node = $vars['node'];
+  if ($vars['view_mode'] != 'full' || empty($node->moderation_state->value)) {
+    return;
+  }
+  switch ($node->moderation_state->value) {
+    case 'draft':
+      $vars['moderation_message'] = t('You are viewing a Draft version of this page. The pink background indicates it is not yet visible to the public.');
+      break;
+    case 'in_review':
+    case 'review':
+      $vars['moderation_message'] = t('This page version is awaiting review by an editor. The pink background indicates it is not yet visible to the public.');
+      break;
+    case 'archive':
+      $vars['moderation_message'] = t('This page has been archived. The pink background indicates it is not visible to the public.');
+      break;
+    default:
+      $vars['moderation_message'] = FALSE;
+  }
+}
