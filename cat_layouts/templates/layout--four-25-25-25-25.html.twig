@@ -1,0 +1,24 @@
+{% if content %}
+  <div {{ attributes.addClass('law-layout').addClass('layout--four-25-25-25-25') }}>
+	  {% if content.first %}
+	    <div {{ region_attributes.first.addClass('law-layout-area area--first') }}>
+	      {{ content.first }}
+	    </div>
+	  {% endif %}
+	  {% if content.second %}
+	    <div {{ region_attributes.second.addClass('law-layout-area area--second') }}>
+	      {{ content.second }}
+	    </div>
+	  {% endif %}
+	  {% if content.third %}
+	    <div {{ region_attributes.third.addClass('law-layout-area area--third') }}>
+	      {{ content.third }}
+	    </div>
+	  {% endif %}
+	  {% if content.fourth %}
+	    <div {{ region_attributes.fourth.addClass('law-layout-area area--fourth') }}>
+	      {{ content.fourth }}
+	    </div>
+	  {% endif %}
+  </div>
+{% endif %}

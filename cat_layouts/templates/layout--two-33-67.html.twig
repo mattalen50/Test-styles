@@ -1,0 +1,19 @@
+{% if content %}
+  <div {{ attributes.addClass('law-layout').addClass('layout--two-33-67') }}>
+    {% if content.sidebar_above %}
+      <div {{ region_attributes.sidebar_above.addClass('law-layout-area area--sidebar-above') }}>
+        {{ content.sidebar_above }}
+      </div>
+    {% endif %}
+    {% if content.main %}
+      <div {{ region_attributes.main.addClass('law-layout-area area--main') }}>
+        {{ content.main }}
+      </div>
+    {% endif %}
+    {% if content.sidebar_first %}
+	    <div {{ region_attributes.sidebar_first.addClass('law-layout-area area--sidebar-first') }}>
+	      {{ content.sidebar_first }}
+	    </div>
+	  {% endif %}
+  </div>
+{% endif %}

@@ -1,0 +1,14 @@
+{% if content %}
+  <div {{ attributes.addClass('law-layout').addClass('layout--two-75-25') }}>
+	  {% if content.main %}
+	    <div {{ region_attributes.main.addClass('law-layout-area area--main') }}>
+	      {{ content.main }}
+	    </div>
+	  {% endif %}
+	  {% if content.second %}
+	    <div {{ region_attributes.second.addClass('law-layout-area area--second') }}>
+	      {{ content.second }}
+	    </div>
+	  {% endif %}
+  </div>
+{% endif %}

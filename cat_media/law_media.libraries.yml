@@ -1,0 +1,9 @@
+media_view:
+  css:
+    theme:
+      css/law_media.media_views.css: { }
+  js:
+    'js/law_media.media_views.js': {}
+  dependencies:
+    - core/drupal
+    - core/jquery

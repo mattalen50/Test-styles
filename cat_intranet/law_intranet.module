@@ -1,0 +1,23 @@
+<?php
+
+/**
+ * Implements template_preprocess_node.
+ *
+ * @param array $variables
+ */
+function law_intranet_preprocess_node__restricted(&$variables) {
+
+  $authenticated_groups = array(
+    "faculty" => "Faculty",
+    "faculty_staff" => "Faculty & Staff",
+    "faculty_staff_student" => "Faculty, Staff, & Students",
+    "authenticated_users" => "Law School Community",
+  );
+
+  $config = \Drupal::config('law_intranet.authenticated_groups');
+
+  foreach ($authenticated_groups as $id => $name) {
+    $var = 'restricted_' . $id . '_block_id';
+    $variables[$var] = $config->get($var);
+  }
+}

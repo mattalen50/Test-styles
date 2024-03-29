@@ -1,0 +1,21 @@
+<?php
+
+/**
+ * Implements hook_mail_alter().
+ */
+function law_mail_mail_alter(&$message) {
+  // Alter messages for specific modules based on message ID
+  // ID is $message['module'] . "_" . $message['key']
+  switch ($message['id']) {
+
+    case 'content_moderation_notifications_content_moderation_notification':
+      // If 'to' is empty, move Content Moderation Notification emails to 'to'
+      // from 'bcc'. Yes' it's 'Bcc' in Notification::sendNotification().
+      if (empty($message['to']) && !empty($message['headers']['Bcc'])) {
+        $message['to'] = $message['headers']['Bcc'];
+        unset($message['headers']['Bcc']);
+      }
+      break;
+
+  }
+}

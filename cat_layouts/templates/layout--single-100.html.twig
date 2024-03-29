@@ -1,0 +1,9 @@
+{% if content %}
+  <div {{ attributes.addClass('law-layout').addClass('layout--single-100') }}>
+	  {% if content.main %}
+	    <div {{ region_attributes.main.addClass('law-layout-area area--main area--constrain') }}>
+	      {{ content.main }}
+	    </div>
+	  {% endif %}
+  </div>
+{% endif %}

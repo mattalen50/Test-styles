@@ -1,0 +1,67 @@
+#views-exposed-form-media-media-page-list .form-item-uid,
+#views-exposed-form-media-library-page .form-item-uid {
+	min-width: 200px;
+}
+
+#views-exposed-form-media-media-page-list .form-item-uid .select2-selection--single,
+#views-exposed-form-media-library-page .form-item-uid .select2-selection--single {
+	height: 24px;
+	border: 1px solid #a6a6a6;
+    border-radius: 0.143em;
+    background: -webkit-linear-gradient(top, #f6f6f3, #e7e7df);
+}
+
+#views-exposed-form-media-media-page-list .form-item-uid .select2-selection--single .select2-selection__placeholder,
+#views-exposed-form-media-library-page .form-item-uid .select2-selection--single .select2-selection__placeholder {
+	color: rgb(20,20,20);
+	font-size: 0.875rem;
+}
+
+#views-exposed-form-media-media-page-list .form-item-uid .select2-selection--single .select2-selection__rendered,
+#views-exposed-form-media-library-page .form-item-uid .select2-selection--single .select2-selection__rendered {
+	line-height: 22px;
+}
+
+#views-exposed-form-media-media-page-list .form-item-uid .select2-selection--single .select2-selection__arrow,
+#views-exposed-form-media-library-page .form-item-uid .select2-selection--single .select2-selection__arrow {
+	height: 24px;
+}
+
+#views-exposed-form-media-media-page-list .form-item-uid .select2-selection--single .select2-selection__arrow b,
+#views-exposed-form-media-library-page .form-item-uid .select2-selection--single .select2-selection__arrow b {
+	border-color: #000 transparent transparent transparent;
+}
+
+#views-form-media-media-page-list .media-change-warning, 
+#views-form-media-library-page .media-change-warning {
+	display: none;
+	border: 2px solid red;
+	padding: 20px;
+	margin: 15px 0;
+}
+
+#views-bulk-operations-configure-action .author-change-warning  {
+	border: 2px solid red;
+	padding: 20px;
+	margin: 15px 0;	
+}
+
+#views-bulk-operations-configure-action .js-form-item-media-image--field-selector-field-media-image,
+#views-bulk-operations-configure-action .js-form-item-media-image--field-selector-name,
+#views-bulk-operations-configure-action .js-form-item-media-image--field-selector-field-media-in-library,
+#views-bulk-operations-configure-action .js-form-item-media-document--field-selector-field-media-document,
+#views-bulk-operations-configure-action .js-form-item-media-document--field-selector-name,
+#views-bulk-operations-configure-action .js-form-item-media-remote-video--field-selector-field-media-oembed-video,
+#views-bulk-operations-configure-action .js-form-item-media-remote-video--field-selector-name,
+#views-bulk-operations-configure-action .js-form-item-media-remote-video--field-selector-field-media-in-library,
+#views-bulk-operations-configure-action .js-form-item-media-video--field-selector-name,
+#views-bulk-operations-configure-action .js-form-item-media-video--field-selector-field-media-video-file,
+#views-bulk-operations-configure-action .js-form-item-media-video--field-selector-field-media-in-library {
+	display: none;
+}
+
+#views-bulk-operations-configure-action #edit-media-tweet,
+#views-bulk-operations-configure-action #edit-media-instagram,
+#views-bulk-operations-configure-action #edit-media-audio {
+	display: none;
+}

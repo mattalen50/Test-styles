@@ -1,0 +1,5 @@
+name: Law School Layouts
+type: module
+description: UMN Law School configurations for layouts.
+package: Law School
+core_version_requirement: ^9 || ^10

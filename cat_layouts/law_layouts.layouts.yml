@@ -1,0 +1,232 @@
+beaker:
+  label: 'Beaker'
+  category: 'Law School'
+  template: templates/layout--beaker
+  library: law_layouts/layouts
+  default_region: main
+  regions:
+    header:
+      label: Header
+    sidebar_above:
+      label: Sidebar above
+    main:
+      label: Main content
+    sidebar_first:
+      label: Sidebar first
+    footer:
+      label: Footer
+  icon_map:
+    - [header]
+    - [sidebar_above, main, main, main]
+    - [sidebar_first, main, main, main]
+    - [footer]
+fozzie:
+  label: 'Fozzie'
+  category: 'Law School'
+  template: templates/layout--fozzie
+  library: law_layouts/layouts
+  default_region: main
+  regions:
+    header:
+      label: Header
+    main:
+      label: Main content
+    sidebar_above:
+      label: Sidebar above
+    sidebar_first:
+      label: Sidebar first
+    sidebar_above_second:
+      label: Sidebar above second
+    sidebar_second:
+      label: Sidebar second
+    footer:
+      label: Footer
+  icon_map:
+    - [header]
+    - [sidebar_above, main, main, sidebar_above_second]
+    - [sidebar_first, main, main, sidebar_above_second]
+    - [sidebar_first, main, main, sidebar_second]
+    - [footer]
+single_100:
+  label: 'Single Column'
+  category: 'Law School'
+  template: templates/layout--single-100
+  classes:
+    arrangement:
+      label: 'Arrangement of contents'
+      multiple: false
+      required: false
+      options:
+        'arrangement--flex': 'Inline, left-justified'
+        'arrangement--flex-centered': 'Inline, centered'
+      description: 'Select the arrangement settings for content in this region.'
+    background:
+      label: 'Background'
+      description: 'Select background style variants.'
+      multiple: true
+      required: false
+      options:
+        'bg--lightgold': 'Light gold'
+        'bg--lightgrey': 'Light grey'
+        'bg--fullbleed': 'Full bleed'
+  library: law_layouts/layouts
+  default_region: main
+  regions:
+    main:
+      label: Main content
+  icon_map:
+    - [main]
+two_50_50:
+  label: 'Two Column (50/50)'
+  category: 'Law School'
+  template: templates/layout--two-50-50
+  classes:
+    background:
+      label: 'Background'
+      description: 'Select background style variants.'
+      multiple: true
+      required: false
+      options:
+        'bg--lightgold': 'Light gold'
+        'bg--lightgrey': 'Light grey'
+        'bg--fullbleed': 'Full bleed'
+  library: law_layouts/layouts
+  default_region: first
+  regions:
+    first:
+      label: First (left)
+    second:
+      label: Second (right)
+  icon_map:
+    - [first, second]
+two_25_75:
+  label: 'Two Column (25/75)'
+  category: 'Law School'
+  template: templates/layout--two-25-75
+  library: law_layouts/layouts
+  default_region: main
+  regions:
+    sidebar_above:
+      label: Sidebar (left, above)
+    sidebar_first:
+      label: Sidebar (left)
+    main:
+      label: Main (right)
+  icon_map:
+    - [sidebar_above, main, main, main]
+    - [sidebar_first, main, main, main]
+two_75_25:
+  label: 'Two Column (75/25)'
+  category: 'Law School'
+  template: templates/layout--two-75-25
+  library: law_layouts/layouts
+  default_region: main
+  regions:
+    main:
+      label: Main (left)
+    second:
+      label: Sidebar (right)
+  icon_map:
+    - [main, main, main, second]
+two_33_67:
+  label: 'Two Column (33/67)'
+  category: 'Law School'
+  template: templates/layout--two-33-67
+  library: law_layouts/layouts
+  default_region: main
+  regions:
+    sidebar_above:
+      label: Sidebar (left, above)
+    sidebar_first:
+      label: Sidebar (left)
+    main:
+      label: Main (right)
+  icon_map:
+    - [sidebar_above, main, main]
+    - [sidebar_first, main, main]
+two_67_33:
+  label: 'Two Column (67/33)'
+  category: 'Law School'
+  template: templates/layout--two-67-33
+  library: law_layouts/layouts
+  default_region: main
+  regions:
+    main:
+      label: Main (left)
+    second:
+      label: Sidebar (right)
+  icon_map:
+    - [main, main, second]
+three_33_33_33:
+  label: 'Three Column (33/33/33)'
+  category: 'Law School'
+  template: templates/layout--three-33-33-33
+  classes:
+    background:
+      label: 'Background'
+      description: 'Select background style variants.'
+      multiple: true
+      required: false
+      options:
+        'bg--lightgold': 'Light gold'
+        'bg--lightgrey': 'Light grey'
+        'bg--fullbleed': 'Full bleed'
+  library: law_layouts/layouts
+  default_region: first
+  regions:
+    first:
+      label: First (left)
+    second:
+      label: Middle (center)
+    third:
+      label: Third (right)
+  icon_map:
+    - [first, second, third]
+three_25_50_25:
+  label: 'Three Column, middle main (25/50/25)'
+  category: 'Law School'
+  template: templates/layout--three-25-50-25
+  library: law_layouts/layouts
+  default_region: main
+  regions:
+    sidebar_above:
+      label: Sidebar above
+    sidebar_above_second:
+      label: Sidebar above second
+    main:
+      label: Main (center)
+    sidebar_first:
+      label: Sidebar first
+    sidebar_second:
+      label: Sidebar second
+  icon_map:
+    - [ sidebar_above, main, main, sidebar_above_second ]
+    - [ sidebar_first, main, main, sidebar_above_second ]
+    - [ sidebar_first, main, main, sidebar_second ]
+four_25_25_25_25:
+  label: 'Four Column (25/25/25/25)'
+  category: 'Law School'
+  template: templates/layout--four-25-25-25-25
+  classes:
+    background:
+      label: 'Background'
+      description: 'Select background style variants.'
+      multiple: true
+      required: false
+      options:
+        'bg--lightgold': 'Light gold'
+        'bg--lightgrey': 'Light grey'
+        'bg--fullbleed': 'Full bleed'
+  library: law_layouts/layouts
+  default_region: first
+  regions:
+    first:
+      label: First (left)
+    second:
+      label: Middle (center)
+    third:
+      label: Third (center)
+    fourth:
+      label: Fourth (right)
+  icon_map:
+    - [first, second, third, fourth]

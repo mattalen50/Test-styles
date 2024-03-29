@@ -1,0 +1,86 @@
+<?php
+
+use Drupal\user\Entity\User;
+use Drupal\Core\Form\FormStateInterface;
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ *
+ * Creates a select filter for all users that have a role that isn't anonymous or authenticated.
+ * Helps to allow filtering media admin views by the media item's author.
+ */
+function law_media_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+  // If not the view we are looking, move on
+  if ($form['#id'] == 'views-exposed-form-media-media-page-list' || $form['#id'] == 'views-exposed-form-media-library-page') {
+    $form['#attached']['library'][] = 'law_media/media_view';
+
+    // Query users and find all users without a null role, or authenticated or anonymous
+    $query = \Drupal::entityQuery('user')
+      ->accessCheck(FALSE)
+      ->condition('roles', NULL, 'IS NOT NULL')
+      ->condition('roles', ['authenticated'], 'NOT IN')
+      ->condition('roles', ['anonymous'], 'NOT IN');
+    $uids = $query->execute();
+
+    // If there are no users, move on
+    if (!$uids) {
+     return FALSE;
+    }
+
+    //check the authored by filter exists
+    if('uid'){
+      // Start building out the options for our user select list
+      $userOptions = [];
+      $users = \Drupal\user\Entity\User::loadMultiple($uids);
+      $default = [];
+      // Push titles into select list
+      foreach ($users as $user) {
+       $userOptions[$user->id()] = $user->getAccountName();
+      }
+
+      //sort the select options
+      asort($userOptions);
+
+      // Start building out our new form element which overrides the authored by filter on the view
+      $author_field = 'uid';
+      $form[$author_field]['#type'] = 'select2';
+      $form[$author_field]['#options'] = $userOptions;
+      $form[$author_field]['#multiple'] = FALSE;
+      $form[$author_field]['#size'] = 9;
+      $form[$author_field]['#empty_option'] = t('- Any -');
+    }
+  }
+}
+
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Adds notes/warnings to forms when modify field values VBO option is selected and when
+ * the change author option is selected
+ *
+ */
+function law_media_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if ($form['#id'] == 'views-form-media-media-page-list' || $form['#id'] == 'views-form-media-library-page') {
+    //creates a display only form element to show a notice to the user.
+    //weight is set to position element within the form.
+    $form['media_change_warning'] = array(
+      '#type' => 'item',
+      '#markup' => t('<strong>Important note:</strong> <ul><li>You will only be able to change ownership for media items that you own. It is recommended that you filter to your media items using the "Author" select above.</li><li>Modifying large numbers of media items at once may terminate prematurely. Please review your changes and repeat the process on any items that may have been missed.</li></ul>'),
+      '#weight' => -100,
+      '#wrapper_attributes' => ['class' => ['media-change-warning']],
+    );
+  }
+  if ($form['#id'] == 'views-bulk-operations-configure-action') {
+    $form['#attached']['library'][] = 'law_media/media_view';
+    //creates a display only form element to show a notice to the user.
+    //weight is set to position element within the form.
+    $form['author_change_warning'] = array(
+      '#type' => 'item',
+      '#markup' => t('<strong>Warning:</strong> Passing ownership of your media to someone else will remove your ability to perform further edits to the media. Contact the new owner (or the admins at <a href="mailto:law-webmaster@umn.edu">law-webmaster@umn.edu</a>) to request the return of ownership to yourself.'),
+      '#weight' => 100,
+      '#wrapper_attributes' => ['class' => ['author-change-warning']],
+    );
+  }
+}

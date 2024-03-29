@@ -1,0 +1,35 @@
+{% if content %}
+  <div {{ attributes.addClass('law-layout').addClass('layout--fozzie') }}>
+  {% if content.header %}
+    <div {{ region_attributes.header.addClass('law-layout-area area--header area--constrain') }}>
+      {{ content.header }}
+    </div>
+  {% endif %}
+    <div {{ region_attributes.sidebar_above.addClass('law-layout-area area--sidebar-above') }}>
+      {{ content.sidebar_above }}
+    </div>
+    <div {{ region_attributes.sidebar_above_second.addClass('law-layout-area area--sidebar-above-second') }}>
+      {{ content.sidebar_above_second }}
+    </div>
+  {% if content.main %}
+    <div {{ region_attributes.main.addClass('law-layout-area area--main') }}>
+      {{ content.main }}
+    </div>
+  {% endif %}
+  {% if content.sidebar_first %}
+    <div {{ region_attributes.sidebar_first.addClass('law-layout-area area--sidebar-first') }}>
+      {{ content.sidebar_first }}
+    </div>
+  {% endif %}
+  {% if content.sidebar_second %}
+    <div {{ region_attributes.sidebar_second.addClass('law-layout-area area--sidebar-second') }}>
+      {{ content.sidebar_second }}
+    </div>
+  {% endif %}
+  {% if content.footer %}
+    <div {{ region_attributes.footer.addClass('law-layout-area area--footer area--constrain') }}>
+      {{ content.footer }}
+    </div>
+  {% endif %}
+  </div>
+{% endif %}

@@ -1,0 +1,52 @@
+<?php
+global $authenticated_groups;
+$authenticated_groups = array(
+  "faculty" => "Faculty",
+  "faculty_staff" => "Faculty & Staff",
+  "faculty_staff_student" => "Faculty, Staff, & Students",
+  "authenticated_users" => "Law School Community",
+);
+
+/**
+ * Implements hook_install().
+ */
+function law_intranet_install() {
+
+  global $authenticated_groups;
+
+  $block_content = \Drupal::entityTypeManager()->getStorage('block_content');
+
+  foreach ($authenticated_groups as $id => $name) {
+    $block = $block_content->create(array(
+      'type' => 'text',
+    ));
+
+    $block->info = $name . ' Message Block';
+    $block->body->value = "<h1>Minnesota Law " . $name . " Intranet</h1><p>Welcome to Minnesota Law's " . $name . " intranet. Please log in with your University of Minnesota user ID and password.</p>";
+    $block->body->format = 'unfiltered_ckeditor';
+    $block->save();
+
+    $config = \Drupal::service('config.factory')->getEditable('law_intranet.authenticated_groups');
+    $config->set(('restricted_' . $id . '_block_id'), $block->id())->save();
+  }
+}
+
+function law_intranet_uninstall() {
+
+  global $authenticated_groups;
+
+  $block_content = \Drupal::entityTypeManager()->getStorage('block_content');
+  $config = \Drupal::service('config.factory')->getEditable('law_intranet.authenticated_groups');
+  $config_ids = [];
+
+  foreach ($authenticated_groups as $id => $name) {
+    $config_id = $config->get('restricted_' . $id . '_block_id');
+    array_push($config_ids, $config_id);
+  }
+
+  $to_delete = $block_content->loadMultiple($config_ids);
+  $block_content->delete($to_delete);
+
+  $config->delete();
+
+}

@@ -1,0 +1,5 @@
+name: Law Mail
+type: module
+description: Helper module for managing Drupal-generated email.
+package: Law School
+core_version_requirement: ^9 || ^10
