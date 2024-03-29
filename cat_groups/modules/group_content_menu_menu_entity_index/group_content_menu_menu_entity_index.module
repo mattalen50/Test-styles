@@ -1,0 +1,10 @@
+<?php
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function group_content_menu_menu_entity_index_form_node_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+  if (isset($form['menu_entity_index'])) {
+    $form['menu_entity_index']['#group'] = 'advanced';
+  }
+}

@@ -1,0 +1,8 @@
+name: law_groups_superfish
+type: module
+description: Block plugin to apply Superfish behavior to Group Content Menus.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+  - group_content_menu:group_content_menu
+  - superfish:superfish

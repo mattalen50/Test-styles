@@ -1,0 +1,5 @@
+name: Law Events
+type: module
+description: Code and configuration in support of Law Events and Events views.
+package: Law School
+core_version_requirement: ^9 || ^10

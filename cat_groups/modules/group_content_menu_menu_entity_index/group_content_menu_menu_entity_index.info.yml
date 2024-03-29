@@ -1,0 +1,8 @@
+name: 'Group Content Menu: Menu Entity Index integration'
+type: module
+description: Extends Menu Entity Index module to work for Group Content Menu entities.
+package: Group
+core_version_requirement: ^9 || ^10
+dependencies:
+  - group_content_menu:group_content_menu
+  - menu_entity_index:menu_entity_index

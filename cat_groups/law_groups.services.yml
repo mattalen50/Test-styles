@@ -1,0 +1,27 @@
+services:
+  logger.channel.law_groups:
+    parent: logger.channel_base
+    arguments: ['law_groups']
+  law_groups.cache_context.route.group:
+    decorates: 'cache_context.route.group'
+    decoration_priority: 1
+    class: Drupal\law_groups\Cache\Context\LawRouteGroupCacheContext
+    arguments: ['@current_route_match', '@entity_type.manager', '@law_groups.group_route_context']
+  law_groups.group_route_context:
+    decorates: 'group.group_route_context'
+    decoration_priority: 1
+    class: Drupal\law_groups\Context\GroupRouteContext
+    arguments: ['@current_route_match', '@entity_type.manager', '@string_translation']
+  law_groups.admin_path.route_subscriber:
+    class: 'Drupal\law_groups\Routing\GroupAdminRouteSubscriber'
+    arguments: ['@config.factory']
+    tags:
+      - { name: 'event_subscriber' }
+  law_groups.group_content_menu_breadcrumb.default:
+    class: Drupal\law_groups\GroupContentMenuBreadcrumbBuilder
+    arguments: ['@menu.active_trail', '@plugin.manager.menu.link', '@request_stack', '@language_manager', '@entity_type.manager', '@cache.menu', '@lock']
+    tags:
+      - { name: breadcrumb_builder, priority: 1011 }
+  law_groups.user_role_adjuster:
+    class: Drupal\law_groups\UserRoleAdjuster
+    arguments: ['@group.membership_loader']

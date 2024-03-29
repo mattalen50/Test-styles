@@ -1,0 +1,8 @@
+#ckeditor-off-canvas-reset ~ div[role="dialog"]:not(.ui-dialog),
+#field-components-wrapper > div[role="dialog"]:not(.ui-dialog) {
+	position: static !important;
+}
+
+#ckeditor-off-canvas-reset ~ div[role="dialog"].cke_dialog_container {
+	position: fixed !important;
+}

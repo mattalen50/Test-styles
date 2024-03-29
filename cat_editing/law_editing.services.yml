@@ -1,0 +1,7 @@
+services:
+  law_editing.template_manager:
+    class: Drupal\law_editing\TemplateManager
+    arguments: ['@entity_type.manager']
+  law_editing.viewsreference_argument_helper:
+    class: Drupal\law_editing\ViewsreferenceArgumentHelper
+    arguments: ['@database', '@cache.default', '@entity_field.manager']

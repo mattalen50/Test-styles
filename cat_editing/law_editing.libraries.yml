@@ -1,0 +1,21 @@
+edit_form:
+  js:
+    'js/law_editing.edit_form.js': {}
+  css:
+    theme:
+      'css/law_editing.edit_form.css': {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - seven/media_library
+    - select2/select2
+ckeditor_fullscreen:
+  css:
+    theme:
+      'css/law_editing.ckeditor_fullscreen.css': {}
+admin_toolbar:
+  js:
+    'js/law_editing.admin_toolbar.js': {}
+  css:
+    theme:
+      'css/law_editing.admin_toolbar.css': {}

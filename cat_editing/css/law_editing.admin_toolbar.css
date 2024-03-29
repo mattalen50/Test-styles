@@ -1,0 +1,9 @@
+.toolbar-menu-administration li.menu-offscreen-parent > ul > li {
+	position: relative;
+}
+.toolbar-menu-administration .menu-offscreen.top {
+	top: 40px;
+}
+.toolbar-menu-administration .menu-offscreen.bottom {
+	bottom: 0;
+}

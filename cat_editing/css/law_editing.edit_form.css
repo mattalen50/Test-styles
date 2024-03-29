@@ -1,0 +1,230 @@
+/**
+ * Show type of Paragraph in corner of paragraph
+ */
+.paragraph--view-mode--preview .law-editing-preview-label {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding: 5px;
+  border-top: 1px dashed #e5e5e3;
+  border-left: 1px dashed #e5e5e3;
+  font-size: 0.8em;
+  font-style: italic;
+  color: darkgray;
+}
+
+.paragraph--type--reusable-content .paragraph--view-mode--preview .law-editing-preview-label {
+  display: none;
+}
+
+/**
+ * Show type of Node display in corner of paragraph
+ */
+.paragraph--view-mode--preview .field--name-field-display-type {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding: 5px;
+  border-top: 1px dashed #e5e5e3;
+  border-right: 1px dashed #e5e5e3;
+  font-size: 0.8em;
+  font-style: italic;
+  color: darkgray;
+}
+
+.lp-builder .law-layout-area {
+  background: #f9f9f9;
+  border: 1px dashed #e5e5e3;
+  transition: all .15s linear;
+  min-height: 50px;
+  margin-bottom: 16px;
+  padding: 10px;
+}
+
+.lp-builder .paragraph {
+  padding: 30px 0;
+}
+
+.lp-builder .paragraph--type--reusable-content .paragraph {
+  padding: 0;
+  margin-bottom: 0;
+}
+
+/**
+ * Modal dialog scrolling issue
+ */
+.lpb-dialog {
+  /* top: 10vh !important; */
+  max-height: 80vh;
+  overflow-y: scroll !important;
+}
+
+/**
+ * Label the sidebar areas
+ */
+.area--sidebar-above:hover:before,
+.area--sidebar-above-second:hover:before,
+.area--sidebar-first:hover:before,
+.area--sidebar-second:hover:before {
+  display: block;
+  position: absolute;
+  top: -16px;
+  right: 0;
+  font-size: 12px;
+}
+
+.area--sidebar-above:hover:before,
+.area--sidebar-above-second:hover:before {
+  content: "Above body on mobile";
+}
+
+.area--sidebar-first:hover:before,
+.area--sidebar-second:hover:before {
+  content: "Below body on mobile";
+}
+
+/**
+ * Menu link parent widget
+ */
+.form-item-menu-menu-parent .select2-container--default {
+  min-width: 100% !important;
+}
+
+/**
+ * Hide entityfieldgroup widget's "edit" option
+ */
+.entitygroupfield-dropbutton-wrapper .edit.dropbutton-action,
+.entitygroupfield-dropbutton-wrapper .dropbutton-toggle {
+  display: none;
+}
+
+.entitygroupfield-dropbutton-wrapper .remove.dropbutton-action {
+  display: block;
+}
+
+.entitygroupfield-dropbutton-wrapper * {
+  border: 0 !important;
+}
+
+.gcontent-type-top {
+  display: block !important;
+}
+
+.gcontent-type-title {
+  overflow: visible !important;
+}
+
+/**
+ * CKEditor toolbar styles
+ */
+
+.node-form .cke {
+  width: auto !important;
+}
+
+.cke_combopanel {
+  min-width: 240px;
+}
+
+[title="Formatting Styles"] .cke_combo_text {
+  width: 120px;
+}
+
+
+span.cke_button__fwcallout_icon {
+  background-image: url(../wysiwyg-icons/folwell-callout.png) !important;
+}
+
+span.cke_button__fwpullquote_icon {
+  background-image: url(../wysiwyg-icons/folwell-pullquote.png) !important;
+}
+
+span.cke_button__fwsimplepullquote_icon {
+  background-image: url(../wysiwyg-icons/folwell-spullquote.png) !important;
+}
+
+a.cke_button__blockquote span.cke_button__blockquote_icon {
+  background: url(../wysiwyg-icons/folwell-blockquote.png) no-repeat 0 0 !important;
+  background-size: contain !important;
+}
+
+
+/**
+ * Media library overrides
+ */
+.media-library-add-form__input-wrapper {
+  background-color: #ffe49a !important;
+}
+
+.media-library-wrapper .media-library-view {
+  flex-direction: row-reverse;
+}
+
+.media-library-wrapper .view-header {
+  align-self: center !important;
+}
+
+.media-library-wrapper [data-drupal-selector="edit-actions"] {
+  margin-top: 3.35rem;
+}
+
+.media-library-item--grid .field--name-thumbnail {
+  max-width: 97%;
+}
+
+.media-library-item--grid .field--name-thumbnail img {
+  width: 100% !important;
+}
+
+.media-library-widget-modal {
+  width: 100% !important;
+  max-width: 90% !important;
+}
+
+.media-library-menu-audio,
+.media-library-menu-document,
+.media-library-menu-video,
+.media-library-menu-tweet,
+.media-library-menu-instagram {
+  display: none !important;
+}
+
+.media-library-item--table img {
+  max-width: 140px !important;
+}
+
+.node-form #edit-actions .button:first-child {
+  margin: 0 1em 1em 0;
+}
+
+.node-form #edit-actions a.button {
+  padding: 0.75em 1em;
+}
+
+.form-actions .button {
+  background-color: #900021;
+  color: #fff;
+}
+
+.form-actions .button:hover {
+  background-color: #7a0019 !important;
+}
+
+.form-actions .workflow-buttons-publish {
+  background-color: #ffde7a;
+  color: #7a0019;
+}
+
+.form-actions .workflow-buttons-publish:hover {
+  background-color: #ffcc33 !important;
+}
+
+.form-actions .button--danger {
+  background-color: transparent;
+  border: 1px solid #7a0019;
+  color: #7a0019 !important;
+}
+
+.form-actions .button--danger:hover {
+  background-color: #eee !important;
+}

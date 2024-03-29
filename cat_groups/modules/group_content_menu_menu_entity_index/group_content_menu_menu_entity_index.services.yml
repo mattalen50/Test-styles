@@ -1,0 +1,18 @@
+services:
+  group_content_menu_menu_entity_index.tracker:
+    decorates: 'menu_entity_index.tracker'
+    decoration_priority: 1
+    class: Drupal\group_content_menu_menu_entity_index\GroupContentMenuAwareTracker
+    arguments:
+      - '@config.factory'
+      - '@database'
+      - '@entity.repository'
+      - '@entity_type.manager'
+      - '@plugin.manager.menu.link'
+      - '@path_processor_manager'
+      - '@request_stack'
+      - '@router'
+      - '@path.validator'
+    calls:
+      - [setMessenger, ['@messenger']]
+      - [setViewsData, ['@?views.views_data']]

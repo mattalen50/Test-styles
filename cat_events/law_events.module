@@ -1,0 +1,97 @@
+<?php
+
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\Entity\Node;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_page_attachments().
+ */
+function law_events_page_attachments(array &$attachments) {
+  // Attach the JS that adds filler entities to the Homepage Events view.
+  $frontpage = trim(Drupal::config('system.site')->get('page.front'), '/');
+  $is_editing_frontpage = (strpos(Drupal::request()
+      ->getRequestUri(), $frontpage . '/edit') !== FALSE);
+  if (\Drupal::service('path.matcher')->isFrontPage() || $is_editing_frontpage) {
+    $attachments['#attached']['library'][] = 'law_events/frontpage';
+  }
+}
+
+/**
+ * Implements hook_preprocess_node().
+ */
+function law_events_preprocess_node(&$variables) {
+  if ($variables['node']->bundle() !== 'law_event') {
+    return;
+  }
+  /** @var \Drupal\node\NodeInterface $node */
+  $node = $variables['node'];
+  // If an event is online and not in-person, hide the physical location fields.
+  $location_status = array_column($node->field_event_location->getValue(), 'value');
+  if (in_array('online', $location_status)) {
+    $variables['online'] = 'online';
+    if (!in_array('inperson', $location_status)) {
+      hide($variables['content']['field_building']);
+      hide($variables['content']['field_address']);
+      hide($variables['content']['field_room']);
+    }
+  }
+  // Format the date range string.
+  /** @var \Drupal\law_events\DateRangeFormatter $formatter */
+  $formatter = \Drupal::service('law_events.date_range_formatter');
+  $variables['date_time'] = (!empty($node->field_end_date->value))
+    ? $formatter->formatDateRange($node->field_start_date->date, $node->field_end_date->date)
+    : $formatter->formatDate($node->field_start_date->date);
+  $variables['date'] = $node->field_start_date->date->format('F j, Y');
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view().
+ */
+function law_events_node_view(array &$build, EntityInterface $node, EntityViewDisplayInterface $display, $view_mode) {
+  if ($node->bundle() !== 'law_event') {
+    return;
+  }
+  // Format the date range string.
+  /** @var \Drupal\law_events\DateRangeFormatter $formatter */
+  $formatter = \Drupal::service('law_events.date_range_formatter');
+  $date_time = (!empty($node->field_end_date->value))
+    ? $formatter->formatDateRange($node->field_start_date->date, $node->field_end_date->date)
+    : $formatter->formatDate($node->field_start_date->date);
+  // Build the "Linked teaser title" display component.
+  if ($display->getComponent('date_time')) {
+    $build['date_time'] = [
+      '#type' => 'markup',
+      '#markup' => $date_time,
+    ];
+  }
+}
+
+/**
+ * Implements hook_entity_extra_field_info().
+ */
+function law_events_entity_extra_field_info() {
+  // Expose the "Formatted date/time" display component to the UI.
+  $extra = [];
+  $extra['node']['law_event']['display']['date_time'] = [
+    'label' => t('Formatted date/time'),
+    'weight' => -10,
+    'visible' => FALSE,
+  ];
+  return $extra;
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ *
+ * Time widgets should require HH:MM, without the SS.
+ */
+function law_events_field_widget_form_alter(&$element, \Drupal\Core\Form\FormStateInterface $form_state, $context) {
+  if (isset($element['value']['#date_increment'])) {
+    $element['value']['#date_increment'] = 60;
+  }
+  if (isset($element['end_value']['#date_increment'])) {
+    $element['end_value']['#date_increment'] = 60;
+  }
+}

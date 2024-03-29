@@ -1,0 +1,489 @@
+<?php
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
+use Drupal\group\Entity\Group;
+use Drupal\group\Entity\GroupInterface;
+
+//// TODO: resume use of these classes once fully on Group 2.x
+// use Drupal\group\Entity\GroupRelationship;
+// use Drupal\group\Entity\GroupRelationshipInterface;
+
+/**
+ * @file
+ * Contains law_groups.module.
+ */
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function law_groups_module_implements_alter(&$implementations, $hook) {
+  // Make sure our hook_node_form_alter runs after the group_content_menu module.
+  if ($hook === 'form_alter' && isset($implementations['law_groups'])) {
+    $set = $implementations['law_groups'];
+    unset($implementations['law_groups']);
+    $implementations['law_groups'] = $set;
+  }
+}
+
+/**
+ *  Implements hook_node_create_access();
+ *
+ * Fixes an "Access Denied" in the Media Library when the user doesn't have
+ * global permissions to create an entity.
+ *
+ * @see https://www.drupal.org/project/group/issues/3071489#comment-13913784
+ */
+function law_groups_node_create_access(AccountInterface $account, array $context, $entity_bundle) {
+  $route_name = Drupal::routeMatch()->getRouteName();
+  if (in_array($route_name, ['media_library.ui', 'view.media_library.widget_table', 'view.media_library.widget'])) {
+    return AccessResult::allowed();
+  }
+  return AccessResult::neutral();
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for 'node_form'.
+ */
+function law_groups_form_node_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+  // Attach JS behaviors.
+  $form['#attached']['library'][] = 'law_groups/edit_form';
+  // Display an item on the edit form when the node is part of a Group.
+  $group = Drupal::service('group.group_route_context')->getGroupFromNode() ?? Drupal::routeMatch()->getParameter('group');
+  if (!empty($group)) {
+    $form['group_name'] = [
+      '#type' => 'item',
+      '#title' => 'Group',
+      '#markup' => "<a href='/group/{$group->id()}'>{$group->label()}</a>",
+      '#weight' => -100,
+    ];
+  }
+  // Dedupe form submit callbacks to prevent 'menu_ui_form_node_form_submit'
+  // from being called twice for some reason.
+  $form['actions']['submit']['#submit'] = array_unique($form['actions']['submit']['#submit'], SORT_REGULAR);
+  // Update the menu link widget to display Group menu links only.
+  if (!empty($form['menu']['link']['menu_parent']['#options'])) {
+    $menu_parent = &$form['menu']['link']['menu_parent'];
+    $groups = [];
+    $group_content_menus = [];
+    // Look for groups the node is part of.
+    $node = $form_state->getFormObject()->getEntity();
+    if ($group = $form_state->get('group')) {
+      $groups_ids[] = (is_a($group, 'Drupal\group\Entity\GroupInterface')) ? $group->id() : $group;
+      $groups = Group::loadMultiple($groups_ids);
+    }
+    elseif (!$node->isNew()) {
+
+      //// TODO: remove conditions & return to "use" dependency injection once
+      //// Group 2.x is in place everywhere
+      if (class_exists('\Drupal\group\Entity\GroupRelationship')) {
+        $group_contents = \Drupal\group\Entity\GroupRelationship::loadByEntity($node);
+        $group_ids = array_map(static function (\Drupal\group\Entity\GroupRelationship $group_content) {
+          return $group_content->getGroup()->id();
+        }, $group_contents);
+      }
+      // NO: if (class_exists('\Drupal\group\Entity\GroupContent')){
+      // Just presume if GroupRelationship doesn't exist, GroupContent does
+      else {
+        $group_contents = \Drupal\group\Entity\GroupContent::loadByEntity($node);
+        $group_ids = array_map(static function (\Drupal\group\Entity\GroupContent $group_content) {
+          return $group_content->getGroup()->id();
+        }, $group_contents);
+      }
+      //// Uncomment this section once dependency injection is safe again
+      // $group_contents = GroupRelationship::loadByEntity($node);
+      // $group_ids = array_map(static function (GroupRelationship $group_content) {
+      //   return $group_content->getGroup()->id();
+      // }, $group_contents);
+      //// END TODO
+
+      $groups = Group::loadMultiple($group_ids);
+    }
+    foreach ($groups as $group) {
+      $group_content_menus += group_content_menu_get_menus_per_group($group);
+    }
+    // If we have Group Content Menus, and the node is not currently part of a global Menu,
+    // then filter out the non-Group menu parent options.
+    if ($form['menu']['enabled']['#default_value'] == FALSE) {
+      $menu_parent['#default_value'] = NULL;
+    }
+    if (!empty($group_content_menus) && ($form['menu']['enabled']['#default_value'] == FALSE || strpos($menu_parent['#default_value'], 'group_menu_link_content') === 0)) {
+      $menu_parent['#options'] = array_filter($menu_parent['#options'], function($key) use ($menu_parent) {
+        return ($key == $menu_parent['#default_value']) || (strpos($key, 'group_menu_link_content') === 0);
+      }, ARRAY_FILTER_USE_KEY);
+      // Check for access.
+      if (!empty($group) && $group->hasPermission('manage group_content_menu', \Drupal::currentUser())) {
+        $form['menu']['#access'] = TRUE;
+      }
+      // If we have no more menu parent options, just hide the whole widget.
+      if (empty($menu_parent['#options'])) {
+        unset($form['menu']);
+      }
+    }
+  }
+}
+
+/**
+ * Implements switching the responsive mobile menus based on the microsite
+ */
+function law_groups_responsive_menu_off_canvas_menu_names_alter(&$menus) {
+  // Check the current group from context.
+  // If it has a Main and secondary Navigation group
+  // content menu, use it for the responsive menu.
+  try {
+    $group = Drupal::service('group.group_route_context')->getGroupFromNode();
+    if (!empty($group)) {
+
+      //// TODO: un-comment so we can use IDE helpers again after Group 2.x
+      // /\*\* @\var Drupal\group\Entity\Storage\GroupRelationshipStorage $groupStorage */
+      //// End TODO
+
+      $groupStorage = \Drupal::entityTypeManager()->getStorage('group_content');
+      $group_contents = $groupStorage->loadByGroup($group, 'group_content_menu:main_navigation');
+      $group_contents_secondary = $groupStorage->loadByGroup($group, 'group_content_menu:secondary_navigation');
+      $group_menus = array();
+
+      if (!empty($group_contents)) {
+        $group_content = reset($group_contents);
+        $group_menus[] = 'group_menu_link_content-' . $group_content->get('entity_id')->entity->id();
+
+        if (!empty($group_contents_secondary)) {
+          $group_content_secondary = reset($group_contents_secondary);
+          $group_menus[] = 'group_menu_link_content-' . $group_content_secondary->get('entity_id')->entity->id();
+        }
+
+        $menus = implode(',', $group_menus);
+      }
+    }
+  }
+  catch (\Drupal\Component\Plugin\Exception\PluginNotFoundException $e) {
+    // Not all group types use the Main Navigation group content menu, so this
+    // is to be expected. Just return quietly.
+    return;
+  }
+}
+
+/**
+ * Implements hook_page_bottom().
+ */
+function law_groups_page_bottom(array &$page_bottom) {
+  // Responsive Menu's Off Canvas menu needs to vary according to the current
+  // Group context.
+  if (isset($page_bottom["page_bottom"]["off_canvas"])) {
+    $page_bottom["page_bottom"]["off_canvas"]["#cache"]["contexts"][] = 'route.group';
+  }
+}
+
+/**
+ * Implements hook_toolbar().
+ */
+function law_groups_toolbar() {
+  // Add a toolbar for managing the user's Groups.
+  $items = [];
+  $current_user = Drupal::currentUser();
+
+  //// TODO: un-comment so we can use IDE helpers again after Group 2.x
+  // /\*\* @\var GroupRelationship[] $memberships */
+  //// End TODO
+
+  $memberships = Drupal::service('group.membership_loader')->loadByUser($current_user);
+  // For exactly one group, get a toolbar of admin items for that group.
+  if (count($memberships) === 1) {
+    $membership = reset($memberships);
+    $group = $membership->getGroup();
+    $items['law_groups-' . $group->id()] = law_groups_prepare_group_actions_toolbar_item($group, $current_user);
+  }
+  // For multiple groups, show a toolbar of the user's groups.
+  if (count($memberships) > 1) {
+    $user_groups = array_map(function($membership) {
+      return $membership->getGroup();
+    }, $memberships);
+    $items['law_groups'] = law_groups_prepare_group_list_toolbar_item($user_groups, $current_user);
+  }
+
+  return $items;
+}
+
+/**
+ * Implements hook_toolbar_alter().
+ */
+function law_groups_toolbar_alter(&$items) {
+  // Distinguish the global Law School manage toolbar from the group toolbar.
+  if (isset($items['administration']['tab'])) {
+    $items['administration']['tab']['#title'] = t('Law School');
+  }
+}
+
+/**
+ * Prepare a Toolbar Item render array, showing admin options for a Group,
+ * appropriate for use in hook_toolbar().
+ *
+ * @param GroupInterface $group
+ *
+ * @return array
+ *
+ * @todo Move this to a service.
+ */
+function law_groups_prepare_group_actions_toolbar_item(GroupInterface $group, AccountInterface $account) {
+  $toolbar_item = [
+    '#type' => 'toolbar_item',
+    'tab' => [
+      '#type' => 'link',
+      '#title' => $group->label(),
+      '#url' => $group->toUrl(),
+    ],
+    'tray' => [
+      '#heading' => t('Group actions'),
+      'group_menu' => [
+        '#theme' => 'links',
+        '#attributes' => [
+          'class' => ['toolbar-menu'],
+        ],
+        '#links' => [],
+      ],
+    ],
+    '#cache' => [
+      'contexts' => [
+        'user.group_permissions',
+      ],
+    ],
+    '#weight' => -15,
+  ];
+  // Add individual admin items to the toolbar, checking access for each one.
+  try {
+    $url = $group->toUrl();
+    if ($url->access($account)) {
+      $toolbar_item['tray']['group_menu']['#links']['dashboard'] = [
+        'type' => 'link',
+        'title' => t('Dashboard'),
+        'url' => $url,
+      ];
+    }
+  } catch (Exception $e) {
+    // No need to do anything else here.
+  }
+  try {
+    $url = Url::fromRoute('view.group_nodes.page_1', ['group' => $group->id()]);
+    if ($url->access($account)) {
+      $toolbar_item['tray']['group_menu']['#links']['content'] = [
+        'type' => 'link',
+        'title' => t('Content'),
+        'url' => $url,
+      ];
+    }
+  } catch (Exception $e) {
+  }
+  try {
+    $url = Url::fromRoute('view.group_members.page_1', ['group' => $group->id()]);
+    if ($url->access($account)) {
+      $toolbar_item['tray']['group_menu']['#links']['members'] = [
+        'type' => 'link',
+        'title' => t('Members'),
+        'url' => $url,
+      ];
+    }
+  } catch (Exception $e) {
+  }
+  try {
+    $url = Url::fromRoute('entity.group_content_menu.collection', ['group' => $group->id()]);
+    if ($url->access($account)) {
+      $toolbar_item['tray']['group_menu']['#links']['menus'] = [
+        'type' => 'link',
+        'title' => t('Menus'),
+        'url' => $url,
+      ];
+    }
+  } catch (Exception $e) {
+  }
+  // If there are no group admin options, scuttle the toolbar item.
+  if (empty($toolbar_item['tray']['group_menu']['#links'])) {
+    return [];
+  }
+  return $toolbar_item;
+}
+
+/**
+ * Prepare a Toolbar Item render array, listing all of the user's groups,
+ * appropriate for use in hook_toolbar().
+ *
+ * @param GroupInterface[] $groups
+ *
+ * @return array
+ *
+ * @todo Move this to a service.
+ */
+function law_groups_prepare_group_list_toolbar_item(array $groups, AccountInterface $account) {
+  $toolbar_item = [
+    '#type' => 'toolbar_item',
+    'tab' => [
+      '#type' => 'link',
+      '#title' => t('My groups'),
+      '#url' => Url::fromRoute('entity.group.collection'),
+    ],
+    'tray' => [
+      '#heading' => t('Group list'),
+      'group_menu' => [
+        '#theme' => 'links',
+        '#attributes' => [
+          'class' => ['toolbar-menu'],
+        ],
+        '#links' => [],
+      ],
+    ],
+    '#cache' => [
+      'contexts' => [
+        'user.group_permissions',
+      ],
+    ],
+    '#weight' => -15,
+  ];
+  foreach ($groups as $group) {
+    $url = $group->toUrl();
+    if ($url->access($account)) {
+      $toolbar_item['tray']['group_menu']['#links'][] = [
+        'type' => 'link',
+        'title' => $group->label(),
+        'url' => $url,
+      ];
+    }
+  }
+  return $toolbar_item;
+}
+
+/**
+ * Implements hook_pathauto_pattern_alter().
+ */
+function law_groups_pathauto_pattern_alter(\Drupal\pathauto\PathautoPatternInterface $pattern, array $context) {
+  // Group home pages should only use a [node:title] pattern, to avoid recursion.
+  if (isset($context['data']['node'])) {
+    $node = $context['data']['node'];
+
+    //// TODO: remove conditions & return to "use" dependency injection once
+    //// Group 2.x is in place everywhere
+    if (class_exists('\Drupal\group\Entity\GroupRelationship')) {
+      $group_contents = \Drupal\group\Entity\GroupRelationship::loadByEntity($node);
+    }
+    //
+    else {
+      $group_contents = \Drupal\group\Entity\GroupContent::loadByEntity($node);
+    }
+    //// Bring back below once dependency injection is returned with Group 2.x
+    // $group_contents = GroupRelationship::loadByEntity($node);
+    //// End TODO
+
+    foreach ($group_contents as $group_content) {
+      $group = $group_content->getGroup();
+      if ($group->hasField('field_home_page') && $group->field_home_page->target_id == $node->id()) {
+        $pattern->setPattern('[node:title]');
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_block() for group_content_menu blocks.
+ */
+function law_groups_preprocess_block__group_content_menu(&$variables) {
+  $group_context_service = Drupal::service('group.group_route_context');
+  $group = $group_context_service->getGroupFromNode() ?? $group_context_service->getGroupFromRoute();
+  if (empty($group)) {
+    return;
+  }
+  // If we're showing the whole menu starting from the root level, then we'll
+  // set the title so that it's a link back to the group home page. This is
+  // meant to work with Folwell Vertical Navs.
+  if ($variables['configuration']['level'] == 1) {
+    if (!empty($group->field_home_page->target_id)) {
+      /** @var \Drupal\node\NodeInterface $home */
+      $home = $group->field_home_page->entity;
+      /** @var \Drupal\Core\Routing\CurrentRouteMatch $current_route */
+      $current_route = Drupal::service('current_route_match');
+      if ($current_route->getRawParameter('node') == $home->id()) {
+        $variables['configuration']['label'] = [
+          '#type' => 'html_tag',
+          '#tag' => 'span',
+          '#value' => $home->label(),
+          '#attributes' => ['class' => ['is-active']],
+        ];
+      }
+      else {
+        $variables['configuration']['label'] = $home->toLink();
+      }
+    }
+  }
+  // If we have a non-root starting level, and we're at least one level deep,
+  // set the block title to the first level link instead.
+  elseif ($variables['configuration']['level'] > 1) {
+    $menu_tree = Drupal::menuTree();
+    $parameters = $menu_tree->getCurrentRouteMenuTreeParameters($variables['content']['#menu_name']);
+    $active_trail = $parameters->activeTrail;
+    $trimmed_trail = array_filter($active_trail);
+    $crumb = end($trimmed_trail);
+    [$entity_type, $uuid] = explode(':', $crumb);
+    if (empty($entity_type) || empty($uuid)) {
+      return;
+    }
+    $menu_link_entity = \Drupal::service('entity.repository')
+      ->loadEntityByUuid($entity_type, $uuid);
+    if (count($trimmed_trail) > 1) {
+      $variables['configuration']['label'] = \Drupal\Core\Link::fromTextAndUrl($menu_link_entity->label(), Url::fromUri($menu_link_entity->link->uri));
+    }
+    elseif (count($trimmed_trail) == 1) {
+      $variables['configuration']['label'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'span',
+        '#value' => $menu_link_entity->label(),
+        '#attributes' => ['class' => ['is-active']],
+      ];
+    }
+  }
+}
+
+/**
+ * Implements hook_group_content_insert().
+ *
+ * Add the global "group_editor" or "group_manager" to an account, depending on
+ * the group roles added.
+ *
+ * @TODO: bring back interface typing once on Group 2.x everywhere
+ */
+function law_groups_group_content_insert($entity) {
+  // function law_groups_group_content_insert(GroupRelationshipInterface $entity) {
+  if (strpos($entity->bundle(), 'group_membership') && $entity->getEntity()) {
+    \Drupal::service('law_groups.user_role_adjuster')->adjustRoles($entity->getEntity());
+  }
+}
+
+/**
+ * Implements hook_group_content_update().
+ *
+ * Add or remove the global 'group_*' roles to an account, depending on
+ * the group roles modified.
+ *
+ * @TODO: bring back interface typing once on Group 2.x everywhere
+ *
+ */
+function law_groups_group_content_update($entity) {
+  // function law_groups_group_content_update(GroupRelationshipInterface $entity) {
+  if (strpos($entity->bundle(), 'group_membership')&& $entity->getEntity()) {
+    \Drupal::service('law_groups.user_role_adjuster')->adjustRoles($entity->getEntity());
+  }
+}
+
+/**
+ * Implements hook_group_content_delete().
+ *
+ * Remove the global "group_editor" or "group_manager" on an account, depending on
+ * the group roles removed.
+ *
+ * @TODO: bring back interface typing once on Group 2.x everywhere
+ *
+ */
+function law_groups_group_content_delete($entity) {
+  // function law_groups_group_content_delete(GroupRelationshipInterface $entity) {
+  if (strpos($entity->bundle(), 'group_membership') && $entity->getEntity()) {
+    \Drupal::service('law_groups.user_role_adjuster')->adjustRoles($entity->getEntity());
+  }
+}

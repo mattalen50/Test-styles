@@ -1,0 +1,7 @@
+frontpage:
+  version: 1.0
+  js:
+    js/frontpage.js: { }
+  dependencies:
+    - core/drupal
+    - core/jquery

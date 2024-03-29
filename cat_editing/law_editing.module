@@ -1,0 +1,561 @@
+<?php
+
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\law_editing\ViewsreferenceArgumentHelper;
+use Drupal\node\NodeInterface;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Views;
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function law_editing_module_implements_alter(&$implementations, $hook) {
+  // Make sure our hook_node_form_alter runs after the group_content_menu module.
+  if ($hook === 'form_alter' && isset($implementations['law_editing'])) {
+    $set = $implementations['law_editing'];
+    unset($implementations['law_editing']);
+    $implementations['law_editing'] = $set;
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for 'node_form'.
+ */
+function law_editing_form_node_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Attach JS behaviors.
+  $form['#attached']['library'][] = 'law_editing/edit_form';
+  $form['#attached']['library'][] = 'law_editing/ckeditor_fullscreen';
+
+  // Convert the menu link parent dropdown to a Select2.
+  if (!empty($form['menu']['link']['menu_parent']['#type'])) {
+    $form['menu']['link']['menu_parent']['#type'] = 'select2';
+  }
+
+  // If we're editing the front page, add the '.path-frontpage' class.
+  $frontpage = trim(Drupal::config('system.site')->get('page.front'), '/');
+  if (strpos(Drupal::request()->getRequestUri(), $frontpage . '/edit') !== FALSE) {
+    $form['#attributes']['class'][] = 'path-frontpage';
+  }
+}
+
+function law_editing_page_attachments(array &$page) {
+  $path = $current_path = \Drupal::service('path.current')->getPath();
+  $logged_in = \Drupal::currentUser()->isAuthenticated();
+  if (strpos($path, "layout") !== false) {
+    $page['#attached']['library'][] = 'law_editing/ckeditor_fullscreen';
+  }
+  if ($logged_in) {
+    $page['#attached']['library'][] = 'law_editing/admin_toolbar';
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter()
+ */
+function law_editing_form_field_config_edit_form_alter(&$form, $form_state, $form_id) {
+
+  // Disable Components field config edit form default_values for content types
+  // using custom Layout Paragraphs default page templates. This config form
+  // element conflicts with defaults set by law_editing_node_create().
+  // Values were formerly hard-coded here as:
+  // $fields_to_disable_defaults = ["node.law_basic_page.field_components", "node.law_news.field_components", "node.law_event.field_components"];
+  $manager = \Drupal::service('law_editing.template_manager');
+  $fields_to_disable_defaults = $manager->getFieldsWithTemplateOverrides();
+
+  if (
+    $form_id == 'field_config_edit_form' &&
+    in_array($form['fid']['#value'], $fields_to_disable_defaults)
+  ) {
+    // Get form element weight before unsetting. Null fallback of 12 is actual
+    // value at time this code was written.
+    $default_value_weight = $form['default_value']['#weight'] ?? 12;
+    unset($form['default_value']);
+    $placeholder = array(
+      '#type' => 'item',
+      '#title' => 'Default Value',
+      '#plain_text' => "Default values for this field are defined in this content type's 'TEMPLATE' node, as implemented by the Law Editing module's law_editing_node_create() function.",
+      '#weight' => $default_value_weight
+    );
+    $form['default_value_placeholder'] = $placeholder;
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_create() for 'node'.
+ *
+ * Prepare default layout for a new node, based on an existing template node.
+ */
+function law_editing_node_create(NodeInterface $node) {
+  // Check if there's a template node for this content type.
+  // @TODO this could be further simplified to invoke a single call here,
+  // and then in the service method, apply the template or not as needed.
+  /** @var \Drupal\law_editing\TemplateManager $manager */
+  $manager = \Drupal::service('law_editing.template_manager');
+  $template = $manager->getTemplateForContentType($node->bundle());
+  if ($template) {
+    // Logic for duplicating template paragraphs to node has been moved to a
+    // new service method:
+    $manager->cloneLayoutParagraphTemplateParagraphs($node, $template);
+  }
+}
+
+/**
+ * Implements hook_paragraph_view_alter().
+ *
+ * Paragraphs that contain form elements break Layout Paragraphs, because form
+ * tags cannot be nested inside other forms. Register a #post_render callback
+ * to convert them to DIV tags.
+ */
+function law_editing_paragraph_view_alter(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display) {
+  if ($display->getMode() == 'preview') {
+    $build['#post_render'][] = '\Drupal\law_editing\ParagraphPreviewAlter::convertFormTags';
+  }
+}
+
+/**
+ * Implements hook_preprocess_paragraph().
+ */
+function law_editing_preprocess_paragraph(&$variables) {
+  if ($variables['view_mode'] == 'preview') {
+    // Add the bundle type as a data attribute so that we can create a label
+    // element for it with JS.
+    // We can't just add the label to the content array here, because Folwell
+    // templates don't print the entire content array.
+    $variables['attributes']['data-bundle-label'] = $variables['paragraph']->type->entity->label();
+  }
+}
+
+/**
+ * Implements hook_toolbar_alter().
+ */
+function law_editing_toolbar_alter(&$items) {
+  // Remove the "Subscription active until:" admin toolbar item.
+  unset($items['acquia_connector']);
+}
+
+/**
+ * Implements hook_preprocess_media_library_item().
+ */
+function law_editing_preprocess_media_library_item(array &$variables) {
+  // Disable the "Edit" button on media widgets, because we almost never want
+  // someone to edit a media entity when editing a node.
+  if (isset($variables['content']['edit_button'])) {
+    $variables['content']['edit_button']['#access'] = FALSE;
+  }
+  // Move the "Remove" button below the media thumbnail.
+  if (isset($variables['content']['remove_button'])) {
+    $variables['content']['remove_button']['#weight'] = 0.02;
+  }
+}
+
+/**
+ * Implements hook_form_media_form_alter().
+ */
+function law_editing_form_media_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Disable revision tab.
+  $form['revision']['#access'] = FALSE;
+  $form['revision_information']['#access'] = FALSE;
+}
+
+/**
+ * Implements hook_editor_js_settings_alter().
+ */
+function law_editing_editor_js_settings_alter(array &$settings) {
+  // Do not allow CKEditor to fill empty elements with &nbsp; characters.
+  $settings['editor']['formats']['filtered_ckeditor']['editorSettings']['fillEmptyBlocks'] = FALSE;
+  $settings['editor']['formats']['unfiltered_ckeditor']['editorSettings']['fillEmptyBlocks'] = FALSE;
+
+  $filtered_ckeditor = $settings['editor']['formats']['filtered_ckeditor'] ?? [];
+  $unfiltered_ckeditor = $settings['editor']['formats']['unfiltered_ckeditor'] ?? [];
+  if ($filtered_ckeditor || $unfiltered_ckeditor) {
+    $styles = [
+      [
+        'name' => 'Regular Button',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'btn btn-maroon',
+        ],
+      ],
+      [
+        'name' => 'Small Button',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'btn btn-small btn-maroon',
+        ],
+      ],
+      [
+        'name' => 'Emphasis Button',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'btn btn-arrow btn-maroon',
+        ],
+      ],
+      [
+        'name' => 'Maroon Outline Button',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'btn btn-outline',
+        ],
+      ],
+      [
+        'name' => 'White Outline Button',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'btn btn-outline white-outline',
+        ],
+      ],
+      [
+        'name' => 'Gray Outline Button',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'btn btn-outline gray-outline',
+        ],
+      ],
+      [
+        'name' => 'Full-Width Button',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'btn btn-full btn-maroon',
+        ],
+      ],
+      [
+        'name' => 'Give Button',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'btn btn-arrow btn-give',
+        ],
+      ],
+      [
+        'name' => 'Emphasis Link',
+        'element' => 'a',
+        'attributes' => [
+          'class' => 'emphasis',
+        ],
+      ],
+      [
+        'name' => 'Clear floats',
+        'element' => 'div',
+        'attributes' => [
+          'class' => 'clear-floats',
+        ],
+      ],
+      [
+        'name' => 'Photo Credit',
+        'element' => 'p',
+        'attributes' => [
+          'class' => 'photo-credit',
+        ],
+      ],
+      [
+        'name' => 'Intro Text',
+        'element' => 'p',
+        'attributes' => [
+          'class' => 'txt-intro',
+        ],
+      ],
+      [
+        'name' => 'Link List',
+        'element' => 'ul',
+        'attributes' => [
+          'class' => 'link-list',
+        ],
+      ],
+      [
+        'name' => 'Initial Cap',
+        'element' => 'span',
+        'attributes' => [
+          'class' => 'initial-cap',
+        ],
+      ],
+      [
+        'name' => 'Hidden Table Header',
+        'element' => 'table',
+        'attributes' => [
+          'class' => 'hidden-header',
+        ],
+      ],
+      [
+        'name' => 'Table Full Width',
+        'element' => 'table',
+        'attributes' => [
+          'style' => 'width:100%',
+        ],
+      ],
+    ];
+
+    if ($filtered_ckeditor) {
+      $settings['editor']['formats']['filtered_ckeditor']['editorSettings']['stylesSet'] =
+        (isset($settings['editor']['formats']['filtered_ckeditor']['editorSettings']['stylesSet']) && is_array($settings['editor']['formats']['filtered_ckeditor']['editorSettings']['stylesSet'])) ?
+        array_merge($settings['editor']['formats']['filtered_ckeditor']['editorSettings']['stylesSet'], $styles) :
+        $styles;
+    }
+
+    if ($unfiltered_ckeditor) {
+      $settings['editor']['formats']['unfiltered_ckeditor']['editorSettings']['stylesSet'] =
+        (isset($settings['editor']['formats']['unfiltered_ckeditor']['editorSettings']['stylesSet']) && is_array($settings['editor']['formats']['unfiltered_ckeditor']['editorSettings']['stylesSet'])) ?
+        array_merge($settings['editor']['formats']['unfiltered_ckeditor']['editorSettings']['stylesSet'], $styles) :
+        $styles;
+    }
+  }
+}
+
+/**
+ * Implements hook_form_layout_paragraphs_component_form_alter()
+ *  (formerly hook_layout_paragraph_element_form_alter().)
+ *
+ * Enhance "View placer" paragraph forms to turn the argument selector into a
+ * dropdown, if possible.
+ */
+function law_editing_form_layout_paragraphs_component_form_alter(array &$component_form, FormStateInterface &$form_state, $form_id) {
+  if ($component_form['#paragraph']?->bundle() == 'view_placer') {
+    // Hide the "Include View Title" checkbox, since we have a separate field
+    // for setting the View Placer title.
+    $component_form['field_views_display']['widget'][0]['options']['title']['#access'] = FALSE;
+
+    // Add the viewsreference AJAX behavior to the display selector.
+    $component_form['field_views_display']['widget'][0]['display_id']['#ajax'] = [
+      'callback' => [
+        '\Drupal\viewsreference\Plugin\Field\FieldWidget\ViewsReferenceSelectWidget',
+        'itemAjaxRefresh',
+      ],
+      'event' => 'change',
+      'wrapper' => $component_form['field_views_display']['widget'][0]['#wrapper_id'],
+    ];
+
+    // Load the selected view and display, and check for a configured argument.
+    $view_name = $component_form['field_views_display']['widget'][0]['target_id']['#default_value'];
+    $display_name = $component_form['field_views_display']['widget'][0]['display_id']['#default_value'];
+    if (!empty($view_name) && !empty($display_name)) {
+      $view = Views::getView($view_name);
+      if (@$view->setDisplay($display_name) == FALSE) {
+        return;
+      }
+      $argument_handlers = $view->getHandlers('argument');
+      if (empty($argument_handlers)) {
+        $component_form['field_views_display']['widget'][0]['options']['argument']['#access'] = FALSE;
+        return;
+      }
+
+      // Get a list of select options for the first argument, if it's a support
+      // argument type.
+      // @todo support multiple arguments, maybe, someday
+      $argument = reset($argument_handlers);
+      $argument_service = Drupal::service('law_editing.viewsreference_argument_helper');
+      if (strpos($argument['table'], '__')) {
+        [$entity_type, $field_name] = explode('__', $argument['table']);
+        /** @var ViewsreferenceArgumentHelper $argument_service */
+        $options = $argument_service->getOptionsFromEntityField($entity_type, $field_name);
+        $argument_title = $argument_service->getFieldName($entity_type, $field_name);
+      }
+      if ($argument['table'] == 'aggregator_feed') {
+        $options = $argument_service->getOptionsForAggregatorFeeds();
+        $argument_title = 'Aggregator feed';
+      }
+
+      // Convert the arguments input into a select dropdown.
+      if (!empty($options)) {
+        $component_form['field_views_display']['widget'][0]['options']['argument']['#type'] = 'select2';
+        // Set dropdownParent here to fix Select2 modal display bug just for
+        // this select form. Once overall Select2 solution is available, may be
+        // able to remove this code.
+        // @see #3211796 https://www.drupal.org/project/select2/issues/3211796
+        if (isset($component_form['#id'])) {
+          $component_form['field_views_display']['widget'][0]['options']['argument']['#select2']['dropdownParent'] = '#' . $component_form['#id'];
+        }
+        $options = ['' => '- No selection -'] + $options;
+        $component_form['field_views_display']['widget'][0]['options']['argument']['#options'] = $options;
+        if (!empty($argument_title)) {
+          $component_form['field_views_display']['widget'][0]['options']['argument']['#title'] = 'Argument (' . $argument_title . ')';
+        }
+        $component_form['field_views_display']['widget'][0]['options']['argument']['#weight'] = 0;
+      }
+    }
+  }
+}
+
+/******************************************
+ * MEDIA LIBRARY HOOKS (from 'seven' theme)
+ ******************************************/
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function law_editing_form_media_library_add_form_alter(array &$form, FormStateInterface $form_state) {
+  $form['#attributes']['class'][] = 'media-library-add-form';
+
+  // If there are unsaved media items, apply styling classes to various parts
+  // of the form.
+  if (isset($form['media'])) {
+    $form['#attributes']['class'][] = 'media-library-add-form--with-input';
+
+    // Put a wrapper around the informational message above the unsaved media
+    // items.
+    $form['description']['#template'] = '<p class="media-library-add-form__description">{{ text }}</p>';
+  } else {
+    $form['#attributes']['class'][] = 'media-library-add-form--without-input';
+  }
+
+  // The "Save and select" button expects there to be a media library interface,
+  // which we've disabled for non-editors. "Save and insert" is really the
+  // expected behavior anyway, so just show that one.
+  if (isset($form['actions']['save_insert'])) {
+    unset($form['actions']['save_select']);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function law_editing_form_media_library_add_form_upload_alter(array &$form, FormStateInterface $form_state) {
+  $form['#attributes']['class'][] = 'media-library-add-form--upload';
+
+  if (isset($form['container'])) {
+    $form['container']['#attributes']['class'][] = 'media-library-add-form__input-wrapper';
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function law_editing_form_media_library_add_form_oembed_alter(array &$form, FormStateInterface $form_state) {
+  $form['#attributes']['class'][] = 'media-library-add-form--oembed';
+
+  // If no media items have been added yet, add a couple of styling classes
+  // to the initial URL form.
+  if (isset($form['container'])) {
+    $form['container']['#attributes']['class'][] = 'media-library-add-form__input-wrapper';
+    $form['container']['url']['#attributes']['class'][] = 'media-library-add-form-oembed-url';
+    $form['container']['submit']['#attributes']['class'][] = 'media-library-add-form-oembed-submit';
+  }
+}
+
+/**
+ * Implements hook_preprocess_item_list__media_library_add_form_media_list().
+ *
+ * This targets each new, unsaved media item added to the media library, before
+ * they are saved.
+ */
+function law_editing_preprocess_item_list__media_library_add_form_media_list(array &$variables) {
+  foreach ($variables['items'] as &$item) {
+    $item['value']['preview']['#attributes']['class'][] = 'media-library-add-form__preview';
+    $item['value']['fields']['#attributes']['class'][] = 'media-library-add-form__fields';
+    $item['value']['remove_button']['#attributes']['class'][] = 'media-library-add-form__remove-button';
+
+    // #source_field_name is set by AddFormBase::buildEntityFormElement()
+    // to help themes and form_alter hooks identify the source field.
+    $fields = &$item['value']['fields'];
+    $source_field_name = $fields['#source_field_name'];
+    if (isset($fields[$source_field_name])) {
+      $fields[$source_field_name]['#attributes']['class'][] = 'media-library-add-form__source-field';
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_media_library_item__widget().
+ *
+ * This targets each media item selected in an entity reference field.
+ */
+function law_editing_preprocess_media_library_item__widget(array &$variables) {
+  $variables['content']['remove_button']['#attributes']['class'][] = 'media-library-item__remove';
+}
+
+/**
+ * Implements hook_preprocess_media_library_item__small().
+ *
+ * This targets each pre-selected media item selected when adding new media in
+ * the modal media library dialog.
+ */
+function law_editing_preprocess_media_library_item__small(array &$variables) {
+  $variables['content']['select']['#attributes']['class'][] = 'media-library-item__click-to-select-checkbox';
+}
+
+/**
+ * @todo Remove this when https://www.drupal.org/project/drupal/issues/2999549
+ * lands.
+ *
+ * @see \Drupal\media_library\Plugin\Field\FieldWidget\MediaLibraryWidget::formElement()
+ */
+function law_editing_preprocess_fieldset__media_library_widget(array &$variables) {
+  if (isset($variables['prefix']['weight_toggle'])) {
+    $variables['prefix']['weight_toggle']['#attributes']['class'][] = 'media-library-widget__toggle-weight';
+  }
+  if (isset($variables['suffix']['open_button'])) {
+    $variables['suffix']['open_button']['#attributes']['class'][] = 'media-library-open-button';
+  }
+}
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function law_editing_views_pre_render(ViewExecutable $view) {
+  $add_classes = function (&$option, array $classes_to_add) {
+    $classes = preg_split('/\s+/', $option);
+    $classes = array_filter($classes);
+    $classes = array_merge($classes, $classes_to_add);
+    $option = implode(' ', array_unique($classes));
+  };
+
+  if ($view->id() === 'media_library') {
+    if ($view->display_handler->options['defaults']['css_class']) {
+      $add_classes($view->displayHandlers->get('default')->options['css_class'], ['media-library-view']);
+    } else {
+      $add_classes($view->display_handler->options['css_class'], ['media-library-view']);
+    }
+
+    if ($view->current_display === 'page') {
+      if (array_key_exists('media_bulk_form', $view->field)) {
+        $add_classes($view->field['media_bulk_form']->options['element_class'], ['media-library-item__click-to-select-checkbox']);
+      }
+      if (array_key_exists('rendered_entity', $view->field)) {
+        $add_classes($view->field['rendered_entity']->options['element_class'], ['media-library-item__content']);
+      }
+      if (array_key_exists('edit_media', $view->field)) {
+        $add_classes($view->field['edit_media']->options['alter']['link_class'], ['media-library-item__edit']);
+      }
+      if (array_key_exists('delete_media', $view->field)) {
+        $add_classes($view->field['delete_media']->options['alter']['link_class'], ['media-library-item__remove']);
+      }
+    } elseif (strpos($view->current_display, 'widget') === 0) {
+      if (array_key_exists('rendered_entity', $view->field)) {
+        $add_classes($view->field['rendered_entity']->options['element_class'], ['media-library-item__content']);
+      }
+      if (array_key_exists('media_library_select_form', $view->field)) {
+        $add_classes($view->field['media_library_select_form']->options['element_wrapper_class'], ['media-library-item__click-to-select-checkbox']);
+      }
+
+      if ($view->display_handler->options['defaults']['css_class']) {
+        $add_classes($view->displayHandlers->get('default')->options['css_class'], ['media-library-view--widget']);
+      } else {
+        $add_classes($view->display_handler->options['css_class'], ['media-library-view--widget']);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_links__media_library_menu().
+ *
+ * This targets the menu of available media types in the media library's modal
+ * dialog.
+ *
+ * @todo Do this in the relevant template once
+ *   https://www.drupal.org/project/drupal/issues/3088856 is resolved.
+ * @todo revisit in https://drupal.org/node/3110132
+ */
+function law_editing_preprocess_links__media_library_menu(array &$variables) {
+  foreach ($variables['links'] as &$link) {
+    // This conditional exists because the media-library-menu__link class is
+    // currently added by Classy, but Seven will eventually not use Classy as a
+    // base theme.
+    // @todo remove conditional, keep class addition in
+    //   https://drupal.org/node/3110137
+    // @see https://www.drupal.org/node/3109287
+    // @see classy_preprocess_links__media_library_menu()
+    if (!isset($link['link']['#options']['attributes']['class']) || !in_array('media-library-menu__link', $link['link']['#options']['attributes']['class'])) {
+      $link['link']['#options']['attributes']['class'][] = 'media-library-menu__link';
+    }
+  }
+}

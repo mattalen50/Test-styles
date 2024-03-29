@@ -1,0 +1,7 @@
+name: law_groups
+type: module
+description: Group module enhancements for UMN Law School.
+package: Law School
+core_version_requirement: ^9 || ^10
+dependencies:
+  - group

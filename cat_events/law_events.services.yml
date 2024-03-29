@@ -1,0 +1,4 @@
+services:
+  law_events.date_range_formatter:
+    class: Drupal\law_events\DateRangeFormatter
+    arguments: ['@config.factory', '@date.formatter']

@@ -1,0 +1,5 @@
+name: Law School Editing
+type: module
+description: UMN Law School customizations for the editing experience.
+package: Law School
+core_version_requirement: ^9 || ^10
