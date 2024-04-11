@@ -1,0 +1,455 @@
+<?php
+
+use Drupal\Core\File\FileSystemInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\webform\WebformSubmissionInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+
+/**
+ * Implements hook_preprocess_page() to redirect to custom page after form submission.
+ */
+function template_builder_preprocess_page(&$variables) {
+  // Get the session service.
+  $session = \Drupal::service('session');
+
+  if ($session->has('template_builder_submission_id')) {
+    // Get the submission ID from the session.
+    $submission_id = $session->get('template_builder_submission_id');
+
+    // Remove the session variable.
+    $session->remove('template_builder_submission_id');
+
+    // Create a new response to redirect the user.
+    $response = new RedirectResponse('/template-builder/download/' . $submission_id);
+    $response->send();
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for webform submission.
+ */
+function template_builder_webform_submission_insert(WebformSubmissionInterface $webform_submission)
+{
+  if ($webform_submission->getWebform()->id() == 'template_builder') {
+    // Get submission data.
+    $data = $webform_submission->getData();
+
+    // Define the initial HTML content.
+    $html_content = <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>University of Minnesota</title>
+  <!--	None of this mobile stuff will work if you don't use a viewport meta tag -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="assets/css/2015-tc.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!--[if IE 8]>
+			<link rel="stylesheet" type="text/css" href="css/ie8.css">
+		<![endif]-->
+  <!--	Script below controls dropdown toggle and footer accordion. -->
+  <script src="assets/js/umnhf-2015.js" type="text/javascript"></script>
+  <script src="assets/js/html5shiv-printshiv.js" type="text/javascript"></script>
+</head>
+
+<body>
+  <div class="header-wrapper-{{ header_color }}">
+    <!-- BEGIN HEADER -->
+    <header class="umnhf umnhf-background-{{ header_color }}" id="umnhf-h" role="banner">
+      <!-- Skip Links: Give your nav and content elements the appropriate ID attributes -->
+      <div id="skipLinks"><a href="#main-nav">Main navigation</a><a href="#main-content">Main content</a></div>
+      <div class="printer">
+        <div class="left"></div>
+        <div class="right"><strong>University of Minnesota</strong><br />https://twin-cities.umn.edu/<br />612-625-5000
+        </div>
+      </div>
+      <div class="umnhf" id="umnhf-h-mast">
+        <div class="logo-and-links">
+          <a class="umnhf" id="umnhf-h-logo" href="https://twin-cities.umn.edu/">
+            <img src="{{ driven }}" alt="Go to the U of M home page">
+          </a>
+          {{ campus_links }}
+        </div>
+        {{ emergency_button_html }}
+        <ul class="umnhf" id="umnhf-h-ql">
+          <li><a href="https://onestop.umn.edu/">One Stop</a></li>
+          <li class="umnhf"><a href="https://www.myu.umn.edu/">MyU <span></span>{{ for }}</a></li>
+        </ul>
+        <!-- Button below is for dropdown toggle, only visible on mobile screens. If using
+								a non-dropdown version you can delete this tag -->
+        <button class="umnhf" id="umnhf-m-search">Search</button>
+      </div>
+      <!-- Twin Cities Campus CSE Code -->
+      <div class="umnhf" id="umnhf-h-search" role="search">
+        <form action="https://usearch.umn.edu/all-campuses" method="GET" style="display: flex;">
+          <input type="text" name="query" placeholder="Search..." aria-label="search"
+            style="flex-grow: 1; padding: 0.5em; margin-right: 0.5em;">
+          <button type="submit" title="search" style="padding: 0.5em;">
+            <svg width="13" height="13" viewBox="0 0 13 13">
+              <title>search</title>
+              <path
+                d="m4.8495 7.8226c0.82666 0 1.5262-0.29146 2.0985-0.87438 0.57232-0.58292 0.86378-1.2877 0.87438-2.1144 0.010599-0.82666-0.28086-1.5262-0.87438-2.0985-0.59352-0.57232-1.293-0.86378-2.0985-0.87438-0.8055-0.010599-1.5103 0.28086-2.1144 0.87438-0.60414 0.59352-0.8956 1.293-0.87438 2.0985 0.021197 0.8055 0.31266 1.5103 0.87438 2.1144 0.56172 0.60414 1.2665 0.8956 2.1144 0.87438zm4.4695 0.2115 3.681 3.6819-1.259 1.284-3.6817-3.7 0.0019784-0.69479-0.090043-0.098846c-0.87973 0.76087-1.92 1.1413-3.1207 1.1413-1.3553 0-2.5025-0.46363-3.4417-1.3909s-1.4088-2.0686-1.4088-3.4239c0-1.3553 0.4696-2.4966 1.4088-3.4239 0.9392-0.92727 2.0864-1.3969 3.4417-1.4088 1.3553-0.011889 2.4906 0.45771 3.406 1.4088 0.9154 0.95107 1.379 2.0924 1.3909 3.4239 0 1.2126-0.38043 2.2588-1.1413 3.1385l0.098834 0.090049z">
+              </path>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </header>
+    <!-- END HEADER -->
+  </div>
+  <!-- BEGIN OPTIONAL UNIT IDENTIFICATION AND NAVIGATION
+		You may remove this section if you do not wish to use it.
+		Must have at least four links and no more than eight.
+		Set options for link orientation in _config.scss
+		Delete this comment on prod -->
+  <header id="umnhf-alt" class="umnhf">
+    <div id="umnhf-alt-sn">
+      <p class="prefix-name{{ first_line_class }}"><a href="#">{{ first_line }}{{ parent_unit_name }}</a></p>
+      <h1 class="sitename"><a href="#">{{ unit_name }}</a></h1>
+    </div>
+  </header>
+  <!-- END UNIT IDENTIFICATION AND NAVIGATION --> <a name="main-nav"></a>
+  <a name="main-content"></a>
+  <main id="umn-main" role="main">
+  </main>
+  <!-- BEGIN OPTIONAL UNIT FOOTER -->
+  <section id="umnhf-uf" class="umnhf">
+    {{ unit_footer_section }}
+    {{ all_footer_links }}
+  </section>
+  <!-- END OPTIONAL UNIT FOOTER -->
+  <!-- BEGIN UofM FOOTER -->
+  <footer id="umnhf-f" class="umnhf" role="contentinfo">
+    <nav id="umnhf-f-myu">
+      <h3 class="umnhf-f-title visually-hidden">For Students, Faculty, and Staff</h3>
+      <ul>
+        <li><a href="https://onestop.umn.edu/">One Stop</a></li>
+        <li><a href="https://www.myu.umn.edu/">My U <span></span></a></li>
+      </ul>
+    </nav>
+    <small>&copy; <span id="cdate">{{ year }}</span> Regents of the University of Minnesota. All rights reserved. The
+      University of Minnesota is an equal opportunity educator and employer. <a href="https://privacy.umn.edu">Privacy
+        Statement</a></small>
+    <small><a
+        href="https://oit-drupal-prd-web.oit.umn.edu/indexAccess.php?ref_url=https://twin-cities.umn.edu/content/home">Report
+        Web Disability-Related Issue</a></small>
+  </footer>
+  <!-- END UofM FOOTER -->
+</body>
+
+</html>
+HTML;
+
+    // Prepare the form options.
+    $form_options = [];
+
+
+    // Define header color
+    if (isset($data['header_color']) && !empty($data['header_color'])) {
+      $form_options['{{ header_color }}'] = $data['header_color'];
+    }
+
+    // Define options
+    // If value driven is checked, add driven to Discover logo, else regular logo
+
+    // Initialize variables
+    // Check if 'driven' is in the options array
+    $driven = in_array('driven', $data['options']);
+    $header_color = $data['header_color'];
+
+    // Determine the image path
+    $img_src = 'assets/img/sprites/tc/';
+
+    if ($driven && $header_color == 'gold') {
+      $img_src .= 'D2D-mrn-blk.svg';
+    } elseif ($driven && $header_color == 'maroon') {
+      // No replacement needed for 'maroon' with 'driven' checked, as it uses the default image path.
+      $img_src .= 'D2D-gld-wht.svg';
+    } elseif (!$driven && $header_color == 'gold') {
+      $img_src .= 'M-mrn-blk.svg';
+    } elseif (!$driven && $header_color == 'maroon') {
+      $img_src .= 'M-gld-wht.svg';
+    } else {
+      // Default image path if no conditions are met
+      $img_src .= 'D2D-gld-wht.svg';
+    }
+    $form_options['{{ driven }}'] = $img_src;
+
+
+    $campus_links = <<<CAMPUS
+<div class="campus-links">
+  <a href="https://crk.umn.edu">Crookston</a>
+  <a href="https://d.umn.edu">Duluth</a>
+  <a href="https://www4.morris.umn.edu/">Morris</a>
+  <a href="https://r.umn.edu">Rochester</a>
+  <a href="https://twin-cities.umn.edu">Twin Cities</a>
+</div>
+CAMPUS;
+
+
+    if (isset($data['options']) && is_array($data['options']) && in_array('for', $data['options'])) {
+      // Add logic for "For Students, Staff, and Faculty" to MyU link
+      $form_options['{{ for }}'] = ': For Students, Faculty, and Staff';
+    } else {
+      $form_options['{{ for }}'] = '';
+    }
+
+    if (isset($data['options']) && is_array($data['options']) && in_array('campus', $data['options'])) {
+      // Add logic for campus links
+      $form_options['{{ campus_links }}'] = $campus_links;
+    } else {
+      $form_options['{{ campus_links }}'] = '';
+    }
+
+    if (isset($data['options']) && is_array($data['options']) && in_array('for', $data['options'])) {
+      // Add logic for "For Students, Staff, and Faculty" to MyU link
+      $form_options['{{ for }}'] = ': For Students, Faculty, and Staff';
+    } else {
+      $form_options['{{ for }}'] = '';
+    }
+
+    // Emergency Button
+    // Initialize an empty string for the emergency button HTML
+    $emergencyButtonHtml = '';
+
+    // Check if "emergency_button" is checked
+    if (in_array('emergency-button', $data['options_continued_'])) {
+      // Build the HTML for the emergency button
+      $emergencyUrl = isset($data['emergency_button_link']['url']) ? $data['emergency_button_link']['url'] : 'http://www.example.com'; // Default URL if not set
+      $emergencyTitle = isset($data['emergency_button_link']['title']) ? $data['emergency_button_link']['title'] : 'Default Title'; // Default title if not set
+
+      $emergencyButtonHtml = <<<HTML
+<div class="emergency-button">
+    <a class="btn bg-maroon btn-small" href="$emergencyUrl">$emergencyTitle</a>
+</div>
+HTML;
+    }
+
+    // Assign the emergency button HTML to the placeholder
+    $form_options['{{ emergency_button_html }}'] = $emergencyButtonHtml;
+
+
+    // Define address
+    if (isset($data['address']) && !empty($data['address'])) {
+      $address_string = '<span itemprop="streetAddress">' . $data['address']['address'];
+      if (isset($data['address']['address_2'])) {
+        $address_string .= ', ' . $data['address']['address_2'];
+      }
+      $address_string .= '</span>, <span itemprop="addressLocality">' . $data['address']['city'] . '</span>, <span itemprop="addressRegion">' . $data['address']['state_province'] . '</span> <span itemprop="postalCode">' . $data['address']['postal_code'] . '</span>';
+
+      // Include country if available
+      if (isset($data['address']['country'])) {
+        $address_string .= ', <span itemprop="addressCountry">' . $data['address']['country'] . '</span>';
+      }
+
+      $form_options['{{ address }}'] = $address_string;
+    }
+
+    // print phone number value
+    if (isset($data['phone_number']) && !empty($data['phone_number'])) {
+      $form_options['{{ phone_number }}'] = $data['phone_number'];
+    }
+
+    // print fax number value
+    if (isset($data['fax_number']) && !empty($data['fax_number'])) {
+      $form_options['{{ fax_number }}'] = $data['fax_number'];
+    }
+
+    // Get the current year
+    $currentYear = date('Y');
+    $form_options['{{ year }}'] = $currentYear;
+
+    // Unit Footer and Social Media
+    // Check if checkboxes are checked
+    $unitFooterChecked = in_array('unit-footer', $data['options_continued_']);
+    $socialMediaChecked = in_array('social', $data['options_continued_']);
+
+    // Start with an empty string for the unit footer HTML
+    $unitFooterHtml = '';
+
+    // Check if either of the checkboxes is checked
+    if ($unitFooterChecked || $socialMediaChecked) {
+      $unitFooterHtml .= '<div class="umnhf-uf-sub">';
+
+      // Include contact information if unit-footer is checked
+      if ($unitFooterChecked) {
+        $unitFooterHtml .= <<<HTML
+  <h2 class="visually-hidden">Contact Information</h2>
+  <address id="umnhf-uf-ci" class="umnhf">
+    <p class="umnhf-f-title">{{ footer_unit_name }}</p>
+    <p>{{ address }}</p>
+    <p><span aria-label="Phone number">Phone:</span> <a href="tel:{{ phone_number }}">{{ phone_number }}</a></p>
+    <p><span aria-label="Fax number">Fax:</span> {{ fax_number }}</p>
+  </address>
+HTML;
+      }
+
+      // Include social media links if social media is checked
+      if ($socialMediaChecked) {
+        // Define social media URLs
+        $social_media = [
+          'facebook_url' => 'facebook',
+          'twitter_url' => 'twitter',
+          'linkedin_url' => 'linkedin',
+          'youtube_url' => 'youtube',
+          'instagram_url' => 'instagram'
+        ];
+
+        $unitFooterHtml .= '<section id="umnhf-uf-sm" class="umnhf"><h2 class="visually-hidden">Connect on Social Media</h2><ul>';
+
+        foreach ($social_media as $urlKey => $className) {
+          if (isset($data[$urlKey]) && !empty($data[$urlKey])) {
+            $visuallyHiddenText = ucfirst(str_replace('_url', '', $className));
+            $unitFooterHtml .= "<li class=\"$className\"><a href=\"{{ $urlKey }}\"><span class=\"visually-hidden\">$visuallyHiddenText</span></a></li>";
+          }
+        }
+
+        $unitFooterHtml .= '</ul></section>';
+      }
+
+      $unitFooterHtml .= '</div>';
+
+    }
+
+    // Add the unitFooterHtml to your HTML content
+    $html_content = str_replace('{{ unit_footer_section }}', $unitFooterHtml, $html_content);
+
+    // Initialize the all_footer_links placeholder
+    $all_footer_links = '';
+
+    // Define footer links for the first two links
+    $footer_links_1_2 = '';
+    for ($i = 1; $i <= 2; $i++) {
+      if (isset($data['footer_link_url_' . $i]) && !empty($data['footer_link_url_' . $i]['url']) && isset($data['footer_link_url_' . $i]['title']) && !empty($data['footer_link_url_' . $i]['title'])) {
+        $footer_links_1_2 .= '<p><a href="' . $data['footer_link_url_' . $i]['url'] . '">' . $data['footer_link_url_' . $i]['title'] . '</a></p>';
+      }
+    }
+
+    if (!empty($footer_links_1_2)) {
+      $all_footer_links .= '<div class="umnhf-uf-sub-2"><h2 class="visually-hidden">Additional Links</h2>' . $footer_links_1_2 . '</div>';
+    }
+
+    // Define footer links for the next two links
+    $footer_links_3_4 = '';
+    for ($i = 3; $i <= 4; $i++) {
+      if (isset($data['footer_link_url_' . $i]) && !empty($data['footer_link_url_' . $i]['url']) && isset($data['footer_link_url_' . $i]['title']) && !empty($data['footer_link_url_' . $i]['title'])) {
+        $footer_links_3_4 .= '<p><a href="' . $data['footer_link_url_' . $i]['url'] . '">' . $data['footer_link_url_' . $i]['title'] . '</a></p>';
+      }
+    }
+
+    if (!empty($footer_links_3_4)) {
+      $all_footer_links .= '<div class="umnhf-uf-sub-3"><h2 class="visually-hidden">Additional Links Continuted</h2>' . $footer_links_3_4 . '</div>';
+    }
+
+    // Assign the entire HTML block to the all_footer_links placeholder
+    $form_options['{{ all_footer_links }}'] = $all_footer_links;
+
+    // Initialize the maximum_width_custom placeholder with an empty string
+    $form_options['{{ maximum_width_custom }}'] = '';
+
+    // Check if first_line is set and not empty and overwrite parent unit name
+    if (isset($data['first_line']) && !empty($data['first_line'])) {
+      $form_options['{{ first_line }}'] = $data['first_line'];
+      $form_options['{{ first_line_class }}'] = ' first-line-style';
+      $form_options['{{ parent_unit_name }}'] = '';
+    } else {
+      $form_options['{{ first_line }}'] = '';
+      $form_options['{{ first_line_class }}'] = '';
+    }
+
+    // Loop through the rest of the submission data
+    foreach ($data as $key => $value) {
+      if (!isset($form_options['{{ ' . $key . ' }}'])) { // Check if key is not already set
+        if ($key === 'checkbox_field_name' && $value) {
+          $form_options['{{ ' . $key . ' }}'] = 'This is some placeholder text because a checkbox was checked.';
+        } elseif ($key === 'unit_name' && !empty($value)) {
+          $form_options['{{ unit_name }}'] = $value;
+        } elseif ($key === 'parent_unit_name' && !empty($value)) {
+          $form_options['{{ parent_unit_name }}'] = $value;
+        } elseif ($key === 'footer_unit_name' && !empty($value)) {
+          $form_options['{{ footer_unit_name }}'] = $value;
+        } else {
+          if (is_string($value)) {
+            $form_options['{{ ' . $key . ' }}'] = $value;
+          }
+        }
+      }
+    }
+
+    // Replace the placeholders in the HTML content with the corresponding form options.
+    $html_content = strtr($html_content, $form_options);
+
+    // Create the HTML file.
+    $file_system = \Drupal::service('file_system');
+    // Check if the directory exists.
+    $directory = 'public://template_builder_files';
+    if (!$file_system->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS)) {
+      \Drupal::messenger()->addError(t('Unable to create the directory @dir.', ['@dir' => $directory]));
+      return;
+    }
+    $filename = 'public://template_builder_files/' . $webform_submission->id() . '.html';
+    $file_system->saveData($html_content, $filename, FileSystemInterface::EXISTS_REPLACE);
+
+    // Get the session service.
+    $session = \Drupal::service('session');
+
+    // Store the submission ID in the session.
+    $session->set('template_builder_submission_id', $webform_submission->id());
+
+  }
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function template_builder_theme($existing, $type, $theme, $path)
+{
+  return [
+    'template_builder_download' => [
+      'variables' => ['data' => NULL, 'download_link' => NULL],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_cron().
+ */
+function template_builder_cron() {
+  $directory = 'public://template_builder_files/';
+  $age_threshold = strtotime('-7 days'); // Adjust as needed to set the age threshold for file deletion
+
+  /** @var \Drupal\Core\File\FileSystemInterface $file_system */
+  $file_system = \Drupal::service('file_system');
+
+  // Scan for .html files
+  $html_files = $file_system->scanDirectory($directory, '/.*\.html$/');
+
+  foreach ($html_files as $uri => $fileinfo) {
+    if ($fileinfo->timestamp < $age_threshold) {
+      // Delete the file
+      if ($file_system->delete($uri)) {
+        // Log the deletion
+        \Drupal::logger('template_builder')->notice('Deleted old HTML file: @filename', ['@filename' => $fileinfo->name]);
+      }
+    }
+  }
+
+  // Scan for .zip files
+  $zip_files = $file_system->scanDirectory($directory, '/.*\.zip$/');
+
+  foreach ($zip_files as $uri => $fileinfo) {
+    if ($fileinfo->timestamp < $age_threshold) {
+      // Delete the file
+      if ($file_system->delete($uri)) {
+        // Log the deletion
+        \Drupal::logger('template_builder')->notice('Deleted old template ZIP file: @filename', ['@filename' => $fileinfo->name]);
+      }
+    }
+  }
+}

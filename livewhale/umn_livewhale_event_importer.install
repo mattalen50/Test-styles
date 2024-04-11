@@ -1,0 +1,40 @@
+<?php
+
+/**
+ * Implements hook_uninstall().
+ */
+
+function umn_livewhale_event_importer_uninstall() {
+  $config_factory = \Drupal::configFactory();
+
+  // List of configuration items to delete.
+  $config_items = [
+    'core.entity_form_display.node.events.default.yml',
+    'core.entity_view_display.node.events.default.yml',
+    'core.entity_view_display.node.events.teaser.yml',
+    'field.field.node.events.body.yml',
+    'field.field.node.events.field_event_date_range.yml',
+    'field.field.node.events.field_event_date_string.yml',
+    'field.field.node.events.field_event_image.yml',
+    'field.field.node.events.field_event_image_string.yml',
+    'field.field.node.events.field_event_location_strin.yml',
+    'field.field.node.events.field_event_time_string.yml',
+    'field.field.node.events.field_remote_url.yml',
+    'field.storage.node.field_event_date_range.yml',
+    'field.storage.node.field_event_date_string.yml',
+    'field.storage.node.field_event_image.yml',
+    'field.storage.node.field_event_image_string.yml',
+    'field.storage.node.field_event_location_strin.yml',
+    'field.storage.node.field_event_time_string.yml',
+    'field.storage.node.field_remote_url.yml',
+    'migrate_plus.migration.umn_custom_events_json_importer.yml',
+    'migrate_plus.migration_group.umn_json_events.yml',
+    'node.type.events.yml',
+    'umn_livewhale_event_importer.settings.yml',
+    'views.view.events_view.yml'
+  ];
+
+  foreach ($config_items as $config_item) {
+    $config_factory->getEditable($config_item)->delete();
+  }
+}

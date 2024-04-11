@@ -1,0 +1,8 @@
+event_css:
+  version: 1.x
+  header: true
+  css:
+    base:
+      css/event-css.css: {}
+  dependencies:
+    - core/drupal

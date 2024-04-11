@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - umn_livewhale_event_importer
+name: 'Event Tag'
+vid: event_tag
+description: ''
+weight: 0

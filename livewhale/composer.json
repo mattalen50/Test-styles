@@ -1,0 +1,15 @@
+{
+    "name": "drupal/umn_livewhale_event_importer",
+    "description": "Import LiveWhale events using JSON and create events Content Type.",
+    "type": "drupal-module",
+    "authors": [
+        {
+            "name": "Brandt Hinterberg",
+            "email": "hinte019@umn.edu"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "drupal/core": "^9.3 || ^10"
+    }
+}

@@ -1,0 +1,12 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - umn_livewhale_event_importer
+id: umn_json_events
+label: 'UMN LiveWhale Event Feed Group'
+description: ''
+source_type: JSON
+module: null
+shared_configuration: null

@@ -1,0 +1,15 @@
+umn_livewhale_event_importer.description:
+  path: '/admin/config/system/umneventimporter/import'
+  defaults:
+    _form: '\Drupal\umn_livewhale_event_importer\Form\JsonImportForm'
+    _title: 'LiveWhale Events Import'
+  requirements:
+    _permission: 'administer site configuration'
+umn_livewhale_event_importer.delete:
+  path: '/admin/config/system/umneventimporter/import/delete/{id}'
+  defaults:
+    _form: '\Drupal\umn_livewhale_event_importer\Form\ConfirmDeleteForm'
+    _title: 'Confirm Deletion'
+  requirements:
+    _permission: 'administer site configuration'
+    id: ^\d+$

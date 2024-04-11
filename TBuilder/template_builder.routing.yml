@@ -1,0 +1,8 @@
+template_builder.download:
+  path: '/template-builder/download/{sid}'
+  defaults:
+    _controller: '\Drupal\template_builder\Controller\TemplateBuilderController::content'
+    _title: 'Download Template'
+  requirements:
+    _permission: 'access content'
+    webform_submission: \d+

@@ -1,0 +1,185 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - umn_livewhale_event_importer
+id: umn_custom_events_json_importer
+class: null
+field_plugin_method: null
+cck_plugin_method: null
+migration_tags: null
+migration_group: umn_json_events
+label: 'UMN LiveWhale Events Feed Importer'
+source:
+  plugin: url
+  data_fetcher_plugin: file
+  urls: 'https://events.tc.umn.edu/live/json/events/group/Earl%20E.%20Bakken%20Center%20for%20Spirituality%20%26amp%3B%20Healing'
+  data_parser_plugin: json
+  item_selector: /
+  fields:
+    -
+      name: id
+      label: ID
+      selector: id
+    -
+      name: title
+      label: Title
+      selector: title
+    -
+      name: start_date
+      label: 'Start Date'
+      selector: date_utc
+    -
+      name: end_date
+      label: 'End date'
+      selector: date2_utc
+    -
+      name: date
+      label: Date
+      selector: date
+    -
+      name: date_time
+      label: Time
+      selector: date_time
+    -
+      name: link
+      label: 'Link to event'
+      selector: url
+    -
+      name: description
+      label: 'Event description'
+      selector: description
+    -
+      name: location
+      label: Location
+      selector: location
+    -
+      name: image
+      label: Image
+      selector: 'thumbnail:html'
+    -
+      name: is_online
+      label: 'Is Online'
+      selector: is_online
+    -
+      name: online_url
+      label: 'Online URL'
+      selector: online_url
+    -
+      name: online_button_label
+      label: 'Online Button Label'
+      selector: online_button_label
+    -
+      name: online_instructions
+      label: 'Online Instructions'
+      selector: online_instructions
+    -
+      name: tags
+      label: Tags
+      selector: tags
+  ids:
+    id:
+      type: string
+  constants:
+    destination_uri: 'public://livewhale_events_data/event.jpg'
+process:
+  slug: events
+  title: title
+  field_remote_url: link
+  body/value:
+    -
+      plugin: get
+      source: description
+  body/format:
+    -
+      plugin: default_value
+      default_value: folwell_ckeditor
+  field_event_date_range/value:
+    plugin: format_date
+    from_format: 'Y-m-d H:i:s'
+    to_format: 'Y-m-d\TH:i:s'
+    timezone: UTC
+    source: start_date
+  field_event_date_range/end_value:
+    plugin: format_date
+    from_format: 'Y-m-d H:i:s'
+    to_format: 'Y-m-d\TH:i:s'
+    timezone: UTC
+    source: end_date
+  field_event_date_string:
+    plugin: get
+    source: date
+  field_event_time_string:
+    plugin: get
+    source: date_time
+  field_event_location_strin:
+    plugin: get
+    source: location
+  _event_image:
+    plugin: imageRegexTransform
+    source: image
+  field_event_image:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: '@_event_image'
+    -
+      plugin: download
+      source:
+        - '@_event_image'
+        - constants/destination_uri
+      file_exists: rename
+    -
+      plugin: entity_generate
+  field_is_online:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: is_online
+    -
+      plugin: get
+      source: is_online
+  field_online_type:
+    plugin: get
+    source: online_type
+  field_online_link:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: online_url
+    -
+      plugin: sub_process
+      process:
+        uri: online_url
+        title: online_button_label
+  field_online_instructions:
+    plugin: get
+    source: online_instructions
+  field_event_tag:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: tags
+    -
+      plugin: entity_generate
+      source: tags
+      value_key: name
+      bundle_key: vid
+      bundle: event_tag
+      entity_type: taxonomy_term
+      ignore_case: true
+  created:
+    plugin: format_date
+    from_format: 'Y-m-d H:i:s'
+    to_format: U
+    source: start_date
+  status:
+    plugin: default_value
+    default_value: 0
+  type:
+    plugin: default_value
+    default_value: events
+destination:
+  plugin: 'entity:node'
+migration_dependencies: null

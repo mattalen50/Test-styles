@@ -1,0 +1,5 @@
+services:
+  umn_livewhale_event_importer.overrider:
+    class: Drupal\umn_livewhale_event_importer\UmnJsonEventImporterOverrides
+    tags:
+      - {name: config.factory.override, priority: 5}

@@ -1,0 +1,15 @@
+# Set configuration defaults. This schema describes the umn_livewhale_event_importer.settings
+# config. The defaults for this config are set in
+# config/install/umn_livewhale_event_importer.settings.yml and then used by
+# \Drupal\umn_livewhale_event_importer\Form\JsonImportForm.
+# @see https://www.drupal.org/node/1905070
+umn_livewhale_event_importer.settings:
+  type: config_object
+  label: 'JSON Event Import Settings'
+  mapping:
+    json:
+      type: string
+      label: 'JSON Events Feed URL'
+    interval:
+      type: integer
+      label: 'Period between cron runs'

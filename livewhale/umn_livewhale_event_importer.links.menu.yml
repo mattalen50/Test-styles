@@ -1,0 +1,6 @@
+umn_livewhale_event_importer.description:
+  title: UMN Events Importer
+  route_name: umn_livewhale_event_importer.description
+  description: 'Configure UMN Events Importer'
+  parent: system.admin_structure
+  weight: 100

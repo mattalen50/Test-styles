@@ -1,0 +1,8 @@
+name: Template Builder
+type: module
+description: 'A module to create a downloadable HTML file based on webform submission.'
+package: Custom
+core_version_requirement: ^9.3 || ^10
+dependencies:
+  - webform
+  - webform_ui

@@ -1,0 +1,13 @@
+name: UMN LiveWhale Event Importer
+# author: Brandt Hinterberg (hinte019@umn.edu)
+type: module
+description: 'Import LiveWhale events using JSON from https://events.tc.umn.edu/feed_builder'
+core_version_requirement: '^9.3 || ^10'
+version: '1.0.1'
+package: 'Import'
+dependencies:
+  - drupal:migrate_plus
+  - drupal:migrate_tools
+  - drupal:lightning_workflow
+  - drupal:content_moderation
+  - drupal:workflows

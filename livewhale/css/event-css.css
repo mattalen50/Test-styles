@@ -1,0 +1,130 @@
+/*Enter CSS styles here*/
+
+.json-event .align-right a {
+  border-bottom: none;
+}
+.json-event .align-right a:hover {
+  background-color: initial;
+}
+
+/*Event view styles*/
+
+/*Better exposed filter styles*/
+
+.event-page-listing .view-filters {
+  margin: 0 auto;
+  text-align: center;
+}
+
+.event-page-listing .bef-exposed-form .form--inline .form-item {
+  float: none;
+  display: inline-block;
+}
+
+.event-page-listing .form--inline {
+  text-align: center;
+}
+
+.page main .event-page-listing ul {
+  overflow: visible;
+}
+
+.event-page-listing .form-select.bef-links ul {
+  list-style-type: none;
+  margin: 0;
+  min-width: 500px;
+  padding: .5em;
+  width: 100%;
+}
+
+.event-page-listing .form-select.bef-links ul li {
+  display: inline-block;
+}
+
+.event-page-listing .form-select.bef-links ul li a {
+  background-color: #f0efee;
+  border: 1pt solid transparent;
+  border-radius: 0;
+  font-weight: 500;
+  line-height: 1.25em;
+  margin-bottom: 1em;
+  padding: .56em 1.39em;
+  text-align: center;
+  transition: background-color .4s ease-in-out;
+}
+
+.event-page-listing .form-select.bef-links ul li a.bef-link--selected {
+  background-color: #d5d6d2;
+  font-weight: 600;
+}
+
+@media screen and (max-width: 640px) {
+  .event-page-listing .form-select.bef-links ul {
+    min-width:inherit;
+  }
+
+  .event-page-listing .form-select.bef-links ul li {
+    margin-bottom: 1em;
+  }
+}
+
+/*End BEF styles*/
+
+/*Event tiles flex*/
+.events-tiles-flex .view-content {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+div.events-tiles-flex div.view-content div.views-row {
+  flex: 0 1 33%;
+  border-left: 4px solid #fc3;
+  padding: 0 1.25em;
+  margin-bottom: 2em;
+}
+
+@media screen and (min-width: 901px) {
+  .events-tiles-flex .view-content .views-row:nth-child(1), .events-tiles-flex .view-content .views-row:nth-child(2), .events-tiles-flex .view-content .views-row:nth-child(3) {
+    border-top: none;
+  }
+}
+
+@media screen and (max-width: 900px) {
+  .events-tiles-flex .view-content {
+    flex-direction:column;
+  }
+
+  .events-tiles-flex .view-content .views-row {
+    margin-bottom: 1em;
+  }
+}
+
+.events-tiles-flex .photo-credit {
+  margin-bottom: .25em;
+}
+
+.events-tiles-flex .views-field-field-event-time-string {
+  margin-bottom: .5em;
+}
+
+.events-tiles-flex .views-field-title h2 {
+  line-height: 1.5;
+  font-weight: bolder;
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.events-tiles-flex .views-field-title h2 a {
+  border-bottom: none;
+}
+
+.events-tiles-flex .views-field-title h2 a:after {
+  content: none;
+}
+
+/*Responsive image for mobile*/
+@media screen and (max-width:639px) {
+  .event-page-listing .json-event .align-right img {
+    width: 100%;
+  }
+}
